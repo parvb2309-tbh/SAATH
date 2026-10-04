@@ -1,0 +1,3 @@
+trade_id,district_id,provider,earn_low,earn_high,earn3_low,earn3_high,earn5_low,earn5_high,placement_pct,local_pct,women_pct,cohort,source,year,status
+beauty,rewa,Beauty & Wellness Academy Rewa,7000,11000,9500,15000,12000,20000,57,78,93,32,Provider tracer survey (sample),2025,self-reported
+solar,muzaffarpur,Suryamitra Centre Muzaffarpur,9500,13000,13000,18000,16500,24000,60,64,11,40,SIDH placement tracker (sample),2025,verified
