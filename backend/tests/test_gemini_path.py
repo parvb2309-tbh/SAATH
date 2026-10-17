@@ -35,7 +35,7 @@ def test_invented_number_falls_back_to_template(client, monkeypatch):
     assert r["guard_blocked"]
 
 
-def test_distress_keywords_override_the_model(client, monkeypatch):
+def test_crisis_keywords_override_the_model(client, monkeypatch):
     monkeypatch.setattr(gemini, "available", lambda: True)
     monkeypatch.setattr(gemini, "summarize", lambda **_: None)
     monkeypatch.setattr(gemini, "counsel_turn", lambda **_: CounselTurn(
@@ -43,6 +43,7 @@ def test_distress_keywords_override_the_model(client, monkeypatch):
     sid = _session(client)
     r = client.post(f"/api/sessions/{sid}/messages",
                     json={"text": "I feel hopeless, I want to kill myself", "speaker": "learner"}).json()
-    assert r["user"]["concerns"][0] == "distress"
-    assert r["escalation"]["priority"] == 1
-    assert "14416" in r["assistant"]["text"]
+    assert r["user"]["concerns"][0] == "crisis"
+    assert r["escalation"]["priority"] == 1 and r["escalation"]["risk_level"] == 3
+    assert r["risk"]["halted"]
+    assert "14416" in r["assistant"]["text"] and "1800-599-0019" in r["assistant"]["text"]

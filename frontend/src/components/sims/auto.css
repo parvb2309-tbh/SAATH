@@ -1,0 +1,59 @@
+.sim-auto { display: grid; gap: var(--s2); min-width: 0; }
+.sim-auto-where { margin: 0; }
+.sim-auto .note, .sim-auto .alert { margin: 0; }
+
+.sim-auto-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.sim-auto-steps li { border-top: 3px solid var(--line); padding-top: 6px; font-size: 12px; color: var(--text-2); line-height: 1.3; }
+.sim-auto-steps li.done { border-top-color: var(--teal-bright); }
+.sim-auto-steps li.on { border-top-color: var(--teal); color: var(--navy); font-weight: 650; }
+.sim-auto-stepnum { font-variant-numeric: tabular-nums; font-weight: 700; margin-right: 2px; }
+
+.sim-auto-legend { display: inline-flex; align-items: center; gap: 6px; }
+.sim-auto-key { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--navy); }
+.sim-auto-key.fuel { border-top: 3px solid var(--saffron); margin-left: 6px; }
+
+.sim-auto-svg { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.sim-auto-fuel { fill: none; stroke: var(--saffron); stroke-width: 3; }
+.sim-auto-wire { fill: none; stroke: var(--navy); stroke-width: 2; }
+.sim-auto-mesh { fill: none; stroke: var(--text-2); stroke-width: 6; }
+.sim-auto-engine { fill: var(--tint); stroke: var(--line); stroke-width: 1; }
+.sim-auto-cyl { fill: var(--surface); stroke: var(--text-2); stroke-width: 1; }
+.sim-auto-piston { fill: var(--line); stroke: var(--text-2); stroke-width: 1; }
+.sim-auto-rod { stroke: var(--text-2); stroke-width: 3; }
+.sim-auto-crank { fill: var(--surface); stroke: var(--text-2); stroke-width: 2; }
+.sim-auto-enginelabel { font-size: 11px; font-weight: 600; fill: var(--text-2); }
+
+.sim-auto-part { cursor: pointer; outline: none; }
+.sim-auto-part rect { fill: var(--surface); stroke: var(--text-2); stroke-width: 1; }
+.sim-auto-part:hover rect { stroke: var(--navy); }
+.sim-auto-part.sel rect { fill: var(--teal-tint); stroke: var(--teal); stroke-width: 2; }
+.sim-auto-part:focus-visible rect { stroke: var(--saffron); stroke-width: 2; }
+.sim-auto-label { font-size: 11px; font-weight: 600; fill: var(--navy); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.sim-auto-part.sel .sim-auto-label { fill: var(--teal-dark); }
+.sim-auto-dot { fill: var(--teal); pointer-events: none; }
+
+.sim-auto-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s1); }
+.sim-auto-tool {
+  display: grid; justify-items: center; align-content: center; gap: 4px; min-height: 68px; padding: var(--s1) 4px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--navy);
+  font-size: 13px; font-weight: 600; line-height: 1.25; text-align: center; cursor: pointer;
+}
+.sim-auto-tool:hover { border-color: var(--navy); }
+.sim-auto-tool.on { background: var(--teal-tint); border-color: var(--teal); color: var(--teal-dark); }
+
+.sim-auto-readout { border: 1px solid var(--teal); border-left-width: 4px; border-radius: var(--radius); padding: 12px var(--s2); background: var(--surface); }
+.sim-auto-value { font-size: 16px; font-weight: 650; color: var(--navy); font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+.sim-auto-log { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.sim-auto-log li { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: var(--s1); padding: 8px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+.sim-auto-log li > span:last-child { display: grid; gap: 2px; }
+.sim-auto-log li.bad { color: #8a2633; }
+.sim-auto-logval { color: var(--text-2); }
+.sim-auto-log li.bad .sim-auto-logval { color: inherit; }
+
+.sim-auto-diag { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
+
+@media (max-width: 560px) {
+  .sim-auto-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sim-auto-diag { grid-template-columns: minmax(0, 1fr); }
+}

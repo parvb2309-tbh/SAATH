@@ -22,8 +22,17 @@ def test_main_concern(text, expected):
     assert classify(text)[0] == expected
 
 
-def test_distress_detected():
-    assert "distress" in classify("main bahut pareshan hoon, mar jaun aisa lagta hai")
+def test_self_harm_is_crisis_not_just_distress():
+    assert classify("main bahut pareshan hoon, mar jaun aisa lagta hai")[0] == "crisis"
+    assert classify("ghar par maarte hain")[0] == "crisis"
+
+
+def test_pressure_and_dropout_is_distress():
+    assert classify("bahut pressure hai, padhai chhod dunga")[0] == "distress"
+
+
+def test_hesitation_is_confused():
+    assert "confused" in classify("samajh nahi aa raha kaun sa chunu")
 
 
 def test_unknown_is_other():

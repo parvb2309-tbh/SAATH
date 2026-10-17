@@ -17,7 +17,7 @@ MEMBER_LABEL = {
     "father": {"en": "father", "hi": "पिता"},
     "guardian": {"en": "guardian", "hi": "अभिभावक"},
 }
-SCHOOLING_RANK = {"8": 8, "10": 10, "12": 12, "grad": 15}
+SCHOOLING_RANK = {"8": 8, "10": 10, "iti": 11, "12": 12, "grad": 15}
 
 
 def rupees(n: int) -> str:
@@ -134,9 +134,12 @@ def cards_for(concerns: list[str], facts: dict) -> list[dict]:
         elif c == "cost":
             for s in facts.get("schemes", [])[:3]:
                 cards.append({"type": "scheme", "id": f"scheme-{s['id']}", **s})
-        elif c == "distress":
+        elif c in ("distress", "crisis"):
             cards.append({"type": "helpline", "id": "telemanas", "name": "Tele-MANAS", "number": "14416",
                           "text": "मुफ़्त, 24 घंटे, आपकी भाषा में" if hi else "Free, 24x7, in your language"})
+            if c == "crisis":
+                cards.append({"type": "helpline", "id": "kiran", "name": "KIRAN", "number": "1800-599-0019",
+                              "text": "मुफ़्त मानसिक स्वास्थ्य सहायता" if hi else "Free mental health support"})
     # de-duplicate by id, keep order
     seen, out = set(), []
     for c in cards:
@@ -170,7 +173,7 @@ def reply_for(concern: str, facts: dict, speaker: str | None = None) -> str:
     t, o, lad = facts.get("trade"), facts.get("outcome"), facts.get("ladder")
     d = facts.get("district")
 
-    if concern in ("greeting", "other") or not t:
+    if concern in ("greeting", "other") or (not t and concern not in ("crisis", "distress", "human_request")):
         if not t:
             return ("नमस्ते! पहले बताइए, किस काम या कोर्स के बारे में सोच रहे हैं? नीचे से कोई कोर्स चुन सकते हैं।" if hi
                     else "Namaste! First, which trade or course are you thinking about? You can pick one below.")
@@ -263,11 +266,28 @@ def reply_for(concern: str, facts: dict, speaker: str | None = None) -> str:
                 "Of course. I have sent a summary of our conversation to a counsellor, who will call you. "
                 "Please add your number and a good time to call above.")
 
+    if concern == "crisis":
+        return ("आप अकेले नहीं हैं, और आपकी सुरक्षा सबसे ज़रूरी है। अभी किसी से बात कीजिए: Tele-MANAS 14416 या KIRAN 1800-599-0019, "
+                "दोनों मुफ़्त हैं। अगर तुरंत ख़तरा है तो 112 पर कॉल करें। मैंने हमारी सुरक्षा टीम को सूचना दे दी है; करियर की बात हम बाद में करेंगे।"
+                if hi else
+                "You are not alone, and your safety matters most. Please talk to someone now: Tele-MANAS 14416 or KIRAN "
+                "1800-599-0019, both free. If you are in immediate danger, call 112. I have alerted our safeguarding team; "
+                "we will come back to careers later.")
+
     if concern == "distress":
-        return ("आप अकेले नहीं हैं। अभी किसी से बात करना चाहें तो Tele-MANAS पर 14416 पर मुफ़्त कॉल करें, 24 घंटे, आपकी भाषा में। "
-                "मैंने हमारे काउंसलर को भी बता दिया है, वे जल्दी संपर्क करेंगे।" if hi else
-                "You are not alone. If you want to talk to someone now, call Tele-MANAS on 14416: free, 24x7, in your "
-                "language. I have also alerted our counsellor, who will reach out soon.")
+        return ("यह सब सुनकर लगता है कि आप पर बहुत दबाव है, और ऐसा महसूस करना ठीक है। अभी करियर के फ़ैसले को थोड़ा रोक देते हैं। "
+                "अगर आप चाहें तो एक काउंसलर आपसे बात कर सकते हैं; इसके लिए आपकी अनुमति चाहिए। कभी भी Tele-MANAS 14416 पर मुफ़्त बात कर सकते हैं।"
+                if hi else
+                "It sounds like you are under a lot of pressure, and it is okay to feel this way. Let's pause the career "
+                "decision for now. If you agree, a counsellor can talk with you; we need your permission for that. You can "
+                "also call Tele-MANAS on 14416 any time, free.")
+
+    if concern == "confused":
+        nxt = "; ".join(lad["next_options"]) if lad else ""
+        return ("एक साथ बहुत सारे विकल्प उलझन पैदा करते हैं। दो ट्रेड चुनकर उनकी तुलना कीजिए, या लैब में दोनों का सिमुलेशन करके देखिए। "
+                f"{t['name']} के बाद के रास्ते: {nxt}। चाहें तो काउंसलर के साथ सत्र भी बुक कर सकते हैं।" if hi else
+                "Too many options at once can feel confusing. Pick two trades and compare them, or try both in the Lab. "
+                f"After {t['name']}, the paths include: {nxt}. You can also book a session with a counsellor.")
     return no_data(facts)
 
 
@@ -285,7 +305,7 @@ def compose(concerns: list[str], facts: dict, speaker: str | None = None, mood: 
         return acknowledge(facts)
     main = concerns[0]
     text = reply_for(main, facts, speaker)
-    if len(concerns) > 1 and concerns[1] not in ("greeting", "other", "course_info") and main not in ("distress", "human_request"):
+    if len(concerns) > 1 and concerns[1] not in ("greeting", "other", "course_info", "confused")             and main not in ("distress", "crisis", "human_request"):
         text += " " + reply_for(concerns[1], facts, speaker)
     return text
 
@@ -306,12 +326,12 @@ def greeting(facts: dict) -> str:
     joined = (" और ".join(who) if lang == "hi" else " and ".join(who))
     t = facts.get("trade")
     if lang == "hi":
-        base = (f"नमस्ते {joined}, आप सबका स्वागत है! मैं साथ हूँ। मैं आपके परिवार के सवालों का जवाब "
+        base = (f"नमस्ते {joined}, आपका स्वागत है! मैं साथ हूँ, UDAAN की करियर साथी। मैं आपके परिवार के सवालों का जवाब "
                 "आपके इलाक़े के आँकड़ों से दूँगी, अंदाज़े से नहीं।")
         if t:
             base += f" हम {t['name']} के बारे में बात करेंगे। कमाई, नौकरी, सुरक्षा या समाज, जो भी चिंता हो, पूछिए।"
         return base
-    base = (f"Namaste, and welcome {joined}! I'm SAATH. I'll answer your family's questions with figures "
+    base = (f"Namaste, and welcome {joined}! I'm SAATH, your UDAAN career companion. I'll answer your family's questions with figures "
             "from your area, never guesses.")
     if t:
         base += f" We'll talk about {t['name']}. Ask about earnings, jobs, safety or what people will say."

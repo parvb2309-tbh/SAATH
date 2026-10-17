@@ -39,3 +39,8 @@ def test_devanagari_digits():
 def test_helpline_allowed():
     ok, _ = guard.check("Call Tele-MANAS on 14416.", FACTS)
     assert ok
+
+
+def test_helplines_always_allowed():
+    ok, bad = guard.check("Call Tele-MANAS 14416 or KIRAN 1800-599-0019, or 112 in an emergency.", FACTS)
+    assert ok, bad

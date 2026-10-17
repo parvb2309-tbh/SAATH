@@ -1,0 +1,77 @@
+/* Solar PV technician micro-sim. Flat SVG, motion only on state change. */
+.sim-solar { min-width: 0; }
+.sim-solar .meter > span { transition: width 0.15s ease; }
+
+.sim-solar-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+.sim-solar-steps span { height: 4px; background: var(--tint); }
+.sim-solar-steps span.done { background: var(--teal-bright); }
+.sim-solar-steps span.current { background: var(--saffron); }
+
+.sim-solar-svg {
+  display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+  user-select: none; -webkit-user-select: none;
+}
+.sim-solar-svg text { font-family: inherit; }
+.sim-solar-svg [role='button'] { cursor: pointer; }
+.sim-solar-svg [role='button']:focus { outline: none; }
+.sim-solar-svg [role='button']:focus-visible .sim-solar-hit,
+.sim-solar-tp:focus-visible { stroke: var(--saffron); stroke-width: 2; }
+
+.sim-solar-hit { fill: transparent; }
+.sim-solar-label { font-size: 13px; font-weight: 650; fill: var(--navy); }
+.sim-solar-tiny { font-size: 11px; fill: var(--text-2); }
+.sim-solar-tiny.strong { font-weight: 700; }
+.sim-solar-tiny.ok { fill: var(--success); }
+.sim-solar-tiny.err { fill: var(--error); }
+.sim-solar-tiny.inv { fill: #c9d6e3; }
+
+/* step 1: tilt */
+.sim-solar-roof { fill: var(--tint); stroke: var(--line); }
+.sim-solar-sun { fill: var(--saffron); }
+.sim-solar-ray { stroke: var(--saffron); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.sim-solar-leg { stroke: var(--text-2); stroke-width: 3; }
+.sim-solar-panel-side { stroke: var(--navy); stroke-width: 7; }
+.sim-solar-normal { stroke: var(--teal); stroke-width: 2; }
+.sim-solar-arc { fill: none; stroke: var(--teal); stroke-width: 1.5; }
+
+/* step 2: strings + isolator + meter */
+.sim-solar-panel { fill: var(--navy); stroke: var(--navy); }
+.sim-solar-cell { stroke: #3c5a78; stroke-width: 1; }
+.sim-solar-string .sim-solar-hit { stroke: transparent; stroke-width: 2; }
+.sim-solar-string:hover .sim-solar-hit { stroke: var(--line); }
+.sim-solar-string.marked .sim-solar-hit { fill: var(--saffron-tint); stroke: var(--saffron); stroke-width: 2; }
+.sim-solar-wire { stroke: var(--text-2); stroke-width: 2; }
+.sim-solar-wire.live { stroke: var(--teal); stroke-width: 3; }
+.sim-solar-wire.dead { stroke: var(--line); stroke-dasharray: 4 3; }
+.sim-solar-connector { fill: var(--surface); stroke: var(--navy); stroke-width: 1.5; }
+.sim-solar-tp { fill: var(--surface); stroke: var(--error); stroke-width: 2; cursor: pointer; }
+.sim-solar-tp.hot { fill: var(--error-tint); stroke-width: 3; }
+.sim-solar-read { font-size: 10px; font-weight: 650; fill: var(--navy); text-anchor: middle; }
+.sim-solar-box { fill: var(--surface); stroke: var(--navy); stroke-width: 1.5; }
+.sim-solar-box.on { stroke: var(--error); }
+.sim-solar-box.off { stroke: var(--success); }
+.sim-solar-knob { fill: var(--tint); stroke: var(--navy); }
+.sim-solar-handle { fill: var(--error); transition: transform 0.15s ease; }
+.sim-solar-sine { fill: none; stroke: var(--navy); stroke-width: 1.5; }
+.sim-solar-meter { fill: var(--navy); }
+.sim-solar-display { fill: #e3ece4; }
+.sim-solar-volts { font-size: 20px; font-weight: 700; fill: var(--navy); font-variant-numeric: tabular-nums; }
+.sim-solar-lead { fill: none; stroke: var(--error); stroke-width: 2; }
+.sim-solar-probe { cursor: grab; touch-action: none; }
+.sim-solar-probe.dragging { cursor: grabbing; }
+.sim-solar-probe-body { fill: var(--error); }
+.sim-solar-probe-tip { fill: var(--navy); }
+
+.sim-solar-todo { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+.sim-solar-todo li { display: flex; align-items: flex-start; gap: var(--s1); color: var(--text); }
+.sim-solar-todo li.done { color: var(--text-2); }
+.sim-solar-check {
+  flex-shrink: 0; display: inline-grid; place-items: center; width: 18px; height: 18px; margin-top: 2px;
+  border: 1px solid var(--line); border-radius: 2px; background: var(--surface); color: #fff;
+}
+.sim-solar-todo li.done .sim-solar-check { background: var(--success); border-color: var(--success); }
+
+/* step 3 */
+.sim-solar-options { display: grid; gap: var(--s1); }
+.sim-solar-options .chip { justify-content: flex-start; text-align: left; white-space: normal; padding: 8px 14px; }

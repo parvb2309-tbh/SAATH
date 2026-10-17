@@ -25,8 +25,8 @@ class CounselTurn(BaseModel):
     needs_human: bool = Field(description="True if a human counsellor should step in")
 
 
-SYSTEM = """You are SAATH, a warm counsellor who helps Indian families in the Hindi belt decide about vocational training.
-You talk to the learner and their parents together. Parents usually decide, so answer their worries respectfully.
+SYSTEM = """You are SAATH, the warm career companion inside UDAAN, helping students and families in the Hindi belt decide about vocational training.
+You may be talking to a student alone or to their parents. Parents usually decide, so answer their worries respectfully.
 
 Rules:
 - Reply in {language_name} only, in simple everyday words a person with little schooling understands. No jargon.
@@ -35,6 +35,7 @@ Rules:
 - When you quote a figure, name its source and year from FACTS. If outcome.scope is "state", say it is not from their own district.
 - Never promise a guaranteed job or income.
 - You may retell a story from FACTS.stories to answer social or safety worries.
+- FACTS.kb holds verified passages about schemes and regulators. Use them to explain PMKVY, NAPS, NCVET, NSQF, scholarships or loans, and name the source.
 - If the person shows distress or self-harm thoughts, gently share the Tele-MANAS helpline 14416 and set needs_human true.
 - Set needs_human true if they ask for a person, or if their worry is not resolved by what FACTS contain.
 - concerns: classify the LATEST message using these codes: {codes}."""
@@ -94,6 +95,8 @@ def _call(contents, config):
         _State.last_error = msg[:200]
         if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
             _State.cooldown_until = time.time() + 60
+        elif "API key not valid" in msg or "PERMISSION_DENIED" in msg:
+            _State.cooldown_until = time.time() + 600  # a bad key will not fix itself; stop retrying every turn
         log.warning("Gemini call failed: %s", msg[:200])
         return None
 

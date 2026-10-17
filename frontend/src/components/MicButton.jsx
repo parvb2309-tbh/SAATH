@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Mic, Square } from 'lucide-react'
 import { canListenInBrowser, canRecord, listen, stopSpeaking } from '../lib/speech'
 import { useT } from '../lib/i18n'
 
@@ -35,7 +36,7 @@ export default function MicButton({ lang, onPartial, onText, onError, disabled }
       title={supported ? (active ? t('listening') : 'Mic') : 'Voice input is not supported in this browser'}
       aria-label={active ? t('listening') : 'Speak'}
     >
-      {active ? '■' : '🎤'}
+      {active ? <Square size={16} fill="currentColor" /> : <Mic size={20} />}
     </button>
   )
 }

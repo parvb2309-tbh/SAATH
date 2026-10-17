@@ -1,0 +1,82 @@
+/* Domestic electrician micro-sim. Flat SVG board, motion only on state change. */
+.sim-elec { min-width: 0; }
+.sim-elec p { margin: 0; }
+
+.sim-elec-steps { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; }
+.sim-elec-steps span { height: 4px; background: var(--tint); }
+.sim-elec-steps span.done { background: var(--teal-bright); }
+.sim-elec-steps span.current { background: var(--saffron); }
+
+/* step 1: LOTO cards */
+.sim-elec-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
+.sim-elec-card {
+  position: relative; display: grid; grid-template-columns: 32px 20px minmax(0, 1fr) auto; gap: var(--s1);
+  align-items: center; min-height: 56px; padding: var(--s1); border: 1px solid var(--line);
+  border-radius: var(--radius); background: var(--surface);
+}
+.sim-elec-card.dragging { z-index: 1; border-color: var(--teal); background: var(--teal-tint); }
+.sim-elec-card.ok { border-color: var(--success); background: var(--success-tint); }
+.sim-elec-card.err { border-color: var(--error); background: var(--error-tint); }
+.sim-elec-grip {
+  display: grid; place-items: center; width: 32px; height: 40px; color: var(--text-2);
+  cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.sim-elec-card.dragging .sim-elec-grip { cursor: grabbing; color: var(--teal-dark); }
+.sim-elec-card.ok .sim-elec-grip, .sim-elec-card.err .sim-elec-grip { cursor: default; }
+.sim-elec-num { font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.sim-elec-text { font-weight: 600; color: var(--navy); font-size: 15px; line-height: 1.35; }
+.sim-elec-should { display: block; font-size: 12px; font-weight: 500; color: #8a2633; margin-top: 2px; }
+.sim-elec-arrows { gap: 4px; }
+.sim-elec-arrows .icon-btn:disabled { opacity: 0.35; cursor: default; }
+.sim-elec-mark { display: grid; place-items: center; width: 36px; }
+.sim-elec-card.ok .sim-elec-mark { color: var(--success); }
+.sim-elec-card.err .sim-elec-mark { color: var(--error); }
+
+/* step 2: wiring board */
+.sim-elec-svg {
+  display: block; width: 100%; max-width: 520px; height: auto; margin: 0 auto;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);
+  user-select: none; -webkit-user-select: none;
+}
+.sim-elec-svg text { font-family: inherit; }
+.sim-elec-svg [role='button'] { cursor: pointer; }
+.sim-elec-svg [role='button']:focus { outline: none; }
+.sim-elec-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.sim-elec-box.live { stroke: var(--teal); }
+.sim-elec-box.err { stroke: var(--error); fill: var(--error-tint); }
+.sim-elec-title { font-size: 12px; font-weight: 650; fill: var(--navy); }
+.sim-elec-tlabel { font-size: 11px; font-weight: 650; fill: var(--text-2); pointer-events: none; }
+
+.sim-elec-bulb { fill: var(--surface); stroke: var(--text-2); stroke-width: 1.5; transition: fill 0.15s; }
+.sim-elec-bulb.on { fill: var(--saffron); stroke: #b7791f; }
+.sim-elec-filament { fill: none; stroke: var(--text-2); stroke-width: 1.2; }
+
+.sim-elec-blade { cursor: pointer; transition: transform 0.15s ease; }
+.sim-elec-blade .hit { stroke: transparent; stroke-width: 16; }
+.sim-elec-blade .core { stroke: var(--navy); stroke-width: 4; stroke-linecap: round; }
+
+.sim-elec-wire .hit { stroke: transparent; stroke-width: 14; }
+.sim-elec-wire .core { stroke: var(--navy); stroke-width: 3; stroke-linecap: round; }
+.sim-elec-wire:hover .core, .sim-elec-wire:focus-visible .core { stroke: var(--error); }
+
+.sim-elec-term .hit { fill: transparent; }
+.sim-elec-term .ring { fill: var(--surface); stroke: var(--navy); stroke-width: 2; }
+.sim-elec-term .screw { fill: var(--navy); }
+.sim-elec-term:hover .ring { stroke: var(--teal); }
+.sim-elec-term.picked .ring { fill: var(--saffron); stroke: var(--saffron); stroke-width: 3; }
+.sim-elec-term:focus-visible .hit { stroke: var(--saffron); stroke-width: 2; }
+
+.sim-elec-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1); }
+
+.sim-elec-combos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s1); }
+.sim-elec-combo {
+  display: grid; gap: 2px; padding: var(--s1); border: 1px solid var(--line); border-radius: 2px;
+  background: var(--surface); color: var(--text-2);
+}
+.sim-elec-combo.current { border-color: var(--navy); }
+.sim-elec-combo.on { background: var(--saffron-tint); color: #6a4510; }
+.sim-elec-combo.off { background: var(--tint); color: var(--navy); }
+.sim-elec-combo .row { gap: 4px; }
+@media (min-width: 640px) {
+  .sim-elec-combos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

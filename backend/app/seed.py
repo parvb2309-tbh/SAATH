@@ -1,4 +1,4 @@
-"""Demo data for the SAATH prototype.
+"""Demo data for the UDAAN prototype.
 
 Everything here is ILLUSTRATIVE. Earnings, placement rates and stories are generated so the
 prototype has something realistic to show; every record carries a "(demo)" source label and
@@ -9,7 +9,7 @@ import random
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from . import db
+from . import db, seed_udaan
 
 DISTRICTS = [
     # id, name_en, name_hi, state, state_hi, lat, lng
@@ -26,7 +26,7 @@ DISTRICTS = [
 
 TRADES = [
     {
-        "id": "electrician", "icon": "⚡", "nsqf_level": 5, "duration_months": 24, "min_schooling": "10",
+        "id": "electrician", "icon": "zap", "nsqf_level": 5, "duration_months": 24, "min_schooling": "10",
         "name_en": "Electrician", "name_hi": "इलेक्ट्रीशियन",
         "sector_en": "Power", "sector_hi": "बिजली",
         "roles_en": "Electrician, wireman, maintenance technician",
@@ -48,7 +48,7 @@ TRADES = [
         },
     },
     {
-        "id": "solar", "icon": "☀️", "nsqf_level": 4, "duration_months": 3, "min_schooling": "10",
+        "id": "solar", "icon": "sun", "nsqf_level": 4, "duration_months": 3, "min_schooling": "10",
         "name_en": "Solar PV Installer (Suryamitra)", "name_hi": "सोलर पीवी इंस्टॉलर (सूर्यमित्र)",
         "sector_en": "Green jobs", "sector_hi": "हरित रोज़गार",
         "roles_en": "Solar installer, solar pump technician, O&M technician",
@@ -70,7 +70,7 @@ TRADES = [
         },
     },
     {
-        "id": "gda", "icon": "🏥", "nsqf_level": 4, "duration_months": 4, "min_schooling": "10",
+        "id": "gda", "icon": "heart-pulse", "nsqf_level": 4, "duration_months": 4, "min_schooling": "10",
         "name_en": "General Duty Assistant", "name_hi": "जनरल ड्यूटी असिस्टेंट",
         "sector_en": "Healthcare", "sector_hi": "स्वास्थ्य",
         "roles_en": "Patient care assistant, ward assistant, home-care attendant",
@@ -93,7 +93,7 @@ TRADES = [
         },
     },
     {
-        "id": "ac_tech", "icon": "❄️", "nsqf_level": 4, "duration_months": 6, "min_schooling": "10",
+        "id": "ac_tech", "icon": "snowflake", "nsqf_level": 4, "duration_months": 6, "min_schooling": "10",
         "name_en": "AC & Refrigeration Technician", "name_hi": "एसी और फ़्रिज तकनीशियन",
         "sector_en": "Electronics", "sector_hi": "इलेक्ट्रॉनिक्स",
         "roles_en": "AC technician, refrigeration mechanic, service engineer",
@@ -115,7 +115,7 @@ TRADES = [
         },
     },
     {
-        "id": "tailoring", "icon": "🧵", "nsqf_level": 4, "duration_months": 3, "min_schooling": "8",
+        "id": "tailoring", "icon": "scissors", "nsqf_level": 4, "duration_months": 3, "min_schooling": "8",
         "name_en": "Sewing Machine Operator", "name_hi": "सिलाई मशीन ऑपरेटर",
         "sector_en": "Apparel", "sector_hi": "परिधान",
         "roles_en": "Machine operator, tailor, stitching-unit owner",
@@ -136,7 +136,7 @@ TRADES = [
         },
     },
     {
-        "id": "beauty", "icon": "💇", "nsqf_level": 3, "duration_months": 3, "min_schooling": "8",
+        "id": "beauty", "icon": "brush", "nsqf_level": 3, "duration_months": 3, "min_schooling": "8",
         "name_en": "Assistant Beauty Therapist", "name_hi": "सहायक ब्यूटी थेरेपिस्ट",
         "sector_en": "Beauty & wellness", "sector_hi": "ब्यूटी और वेलनेस",
         "roles_en": "Salon assistant, beautician, bridal make-up artist",
@@ -155,6 +155,72 @@ TRADES = [
             ],
         },
     },
+    {
+        "id": "auto_tech", "icon": "car", "nsqf_level": 4, "duration_months": 6, "min_schooling": "10",
+        "name_en": "Automotive Service Technician", "name_hi": "ऑटोमोटिव सर्विस तकनीशियन",
+        "sector_en": "Automotive", "sector_hi": "ऑटोमोबाइल",
+        "roles_en": "Two-wheeler and car service technician, workshop mechanic",
+        "roles_hi": "दोपहिया और कार सर्विस तकनीशियन, वर्कशॉप मैकेनिक",
+        "about_en": "Six-month course on engine servicing, fault diagnosis, brakes and electrical systems of vehicles.",
+        "about_hi": "छह महीने का कोर्स: गाड़ियों के इंजन की सर्विस, ख़राबी ढूँढना, ब्रेक और बिजली के सिस्टम।",
+        "ladder": {
+            "pre": {"en": "Needs Class 10. Work as a workshop helper and finish Class 10 through NIOS.",
+                    "hi": "इसके लिए 10वीं ज़रूरी है। वर्कशॉप में हेल्पर का काम करें और NIOS से 10वीं पूरी करें।"},
+            "course": {"en": "Automotive Service Technician course, 6 months", "hi": "ऑटोमोटिव सर्विस तकनीशियन कोर्स, 6 महीने"},
+            "first_job": {"en": "Technician at an authorised two-wheeler or car service centre",
+                          "hi": "दोपहिया या कार के अधिकृत सर्विस सेंटर में तकनीशियन"},
+            "growth": {"en": "Senior technician, floor supervisor, or own garage", "hi": "सीनियर तकनीशियन, फ़्लोर सुपरवाइज़र, या अपना गैराज"},
+            "next": [
+                {"en": "ITI Mechanic Motor Vehicle (2 years)", "hi": "आईटीआई मैकेनिक मोटर व्हीकल (2 साल)"},
+                {"en": "Electric-vehicle service specialisation", "hi": "इलेक्ट्रिक गाड़ियों की सर्विस में विशेषज्ञता"},
+                {"en": "Diploma in Automobile Engineering", "hi": "ऑटोमोबाइल इंजीनियरिंग में डिप्लोमा"},
+            ],
+        },
+    },
+    {
+        "id": "retail", "icon": "shopping-bag", "nsqf_level": 3, "duration_months": 3, "min_schooling": "10",
+        "name_en": "Retail Customer Service Associate", "name_hi": "रिटेल कस्टमर सर्विस एसोसिएट",
+        "sector_en": "Retail", "sector_hi": "रिटेल",
+        "roles_en": "Sales associate, billing and customer service executive, store assistant",
+        "roles_hi": "सेल्स एसोसिएट, बिलिंग और ग्राहक सेवा कर्मचारी, स्टोर सहायक",
+        "about_en": "Three-month course on serving customers, billing on a POS system, stock and handling returns.",
+        "about_hi": "तीन महीने का कोर्स: ग्राहकों से बात, POS मशीन पर बिलिंग, सामान का हिसाब और वापसी संभालना।",
+        "ladder": {
+            "pre": {"en": "Needs Class 10. Work as a store helper and finish Class 10 through NIOS.",
+                    "hi": "इसके लिए 10वीं ज़रूरी है। दुकान में हेल्पर का काम करें और NIOS से 10वीं पूरी करें।"},
+            "course": {"en": "Retail Sales Associate course, 3 months", "hi": "रिटेल सेल्स एसोसिएट कोर्स, 3 महीने"},
+            "first_job": {"en": "Sales or billing associate in a supermarket, mall or showroom",
+                          "hi": "सुपरमार्केट, मॉल या शोरूम में सेल्स या बिलिंग एसोसिएट"},
+            "growth": {"en": "Team leader, then store or department manager", "hi": "टीम लीडर, फिर स्टोर या विभाग मैनेजर"},
+            "next": [
+                {"en": "B.Voc in Retail Management", "hi": "रिटेल मैनेजमेंट में बी.वोक"},
+                {"en": "E-commerce and warehouse operations", "hi": "ई-कॉमर्स और वेयरहाउस का काम"},
+                {"en": "Own shop with a MUDRA loan", "hi": "मुद्रा लोन से अपनी दुकान"},
+            ],
+        },
+    },
+    {
+        "id": "data_entry", "icon": "table", "nsqf_level": 4, "duration_months": 4, "min_schooling": "12",
+        "name_en": "Domestic Data Entry Operator", "name_hi": "डोमेस्टिक डेटा एंट्री ऑपरेटर",
+        "sector_en": "IT services", "sector_hi": "आईटी सेवाएँ",
+        "roles_en": "Data entry operator, back-office assistant, MIS assistant",
+        "roles_hi": "डेटा एंट्री ऑपरेटर, बैक-ऑफ़िस सहायक, एमआईएस सहायक",
+        "about_en": "Four-month course on fast accurate typing, spreadsheets, formulas, cleaning data and simple reports.",
+        "about_hi": "चार महीने का कोर्स: तेज़ और सही टाइपिंग, स्प्रेडशीट, फ़ॉर्मूले, डेटा साफ़ करना और आसान रिपोर्ट।",
+        "ladder": {
+            "pre": {"en": "Needs Class 12. Learn basic computer use and finish Class 12 through NIOS.",
+                    "hi": "इसके लिए 12वीं ज़रूरी है। कंप्यूटर चलाना सीखें और NIOS से 12वीं पूरी करें।"},
+            "course": {"en": "Domestic Data Entry Operator course, 4 months", "hi": "डोमेस्टिक डेटा एंट्री ऑपरेटर कोर्स, 4 महीने"},
+            "first_job": {"en": "Data entry operator in an office, hospital, bank partner or FPO",
+                          "hi": "दफ़्तर, अस्पताल, बैंक पार्टनर या किसान उत्पादक संगठन में डेटा एंट्री ऑपरेटर"},
+            "growth": {"en": "MIS executive or office supervisor", "hi": "एमआईएस एग्ज़ीक्यूटिव या ऑफ़िस सुपरवाइज़र"},
+            "next": [
+                {"en": "Advanced Excel and data analytics course", "hi": "एडवांस एक्सेल और डेटा एनालिटिक्स कोर्स"},
+                {"en": "B.Voc in IT or BCA through distance mode", "hi": "दूरस्थ माध्यम से आईटी में बी.वोक या बीसीए"},
+                {"en": "Common Service Centre (CSC) operator", "hi": "कॉमन सर्विस सेंटर (CSC) संचालक"},
+            ],
+        },
+    },
 ]
 
 # Monthly earning bands (low, high) in rupees for year 1, year 3, year 5 before district adjustment.
@@ -165,14 +231,20 @@ BASE_BANDS = {
     "ac_tech": ((11000, 16000), (16000, 22000), (20000, 30000)),
     "tailoring": ((7000, 11000), (10000, 15000), (12000, 20000)),
     "beauty": ((7000, 12000), (10000, 16000), (13000, 22000)),
+    "auto_tech": ((10000, 14000), (14000, 20000), (18000, 27000)),
+    "retail": ((9000, 12500), (12000, 17000), (15000, 23000)),
+    "data_entry": ((9500, 13000), (12500, 17500), (15000, 22000)),
 }
-BASE_PLACEMENT = {"electrician": 68, "solar": 62, "gda": 72, "ac_tech": 66, "tailoring": 55, "beauty": 58}
+BASE_PLACEMENT = {"electrician": 68, "solar": 62, "gda": 72, "ac_tech": 66, "tailoring": 55, "beauty": 58,
+                  "auto_tech": 70, "retail": 74, "data_entry": 60}
 WOMEN_RANGE = {"electrician": (5, 12), "solar": (8, 16), "gda": (55, 70), "ac_tech": (4, 10),
-               "tailoring": (70, 90), "beauty": (85, 96)}
+               "tailoring": (70, 90), "beauty": (85, 96), "auto_tech": (3, 9), "retail": (35, 55),
+               "data_entry": (40, 60)}
 DISTRICT_MULT = {"lucknow": 1.08, "varanasi": 0.98, "gorakhpur": 0.92, "patna": 1.0, "gaya": 0.88,
                  "muzaffarpur": 0.9, "bhopal": 1.04, "indore": 1.12, "rewa": 0.9}
 PROVIDER = {"electrician": "Govt ITI {d}", "solar": "Suryamitra Centre, {d}", "gda": "Healthcare Skill Centre, {d}",
-            "ac_tech": "PMKVY Centre, {d}", "tailoring": "Apparel Skill Centre, {d}", "beauty": "Beauty & Wellness Academy, {d}"}
+            "ac_tech": "PMKVY Centre, {d}", "tailoring": "Apparel Skill Centre, {d}", "beauty": "Beauty & Wellness Academy, {d}",
+            "auto_tech": "Automotive Skill Centre, {d}", "retail": "Retail Skill Centre, {d}", "data_entry": "IT Skill Centre, {d}"}
 # Gaps left on purpose so the "state-level fallback" path is visible in the demo.
 MISSING = {("beauty", "rewa"), ("solar", "muzaffarpur"), ("gda", "gorakhpur")}
 SOURCES = [
@@ -218,6 +290,24 @@ STORIES = [
     ("beauty", "gaya", "parent", "Meena ji", "f",
      "Meena ji from Gaya worried about what neighbours would say. Today the same neighbours book her daughter for weddings.",
      "गया की मीना जी को डर था कि पड़ोसी क्या कहेंगे। आज वही पड़ोसी शादियों के लिए उनकी बेटी को बुलाते हैं।"),
+    ("auto_tech", "indore", "alumni", "Imran", "m",
+     "Imran from Indore trained as an automotive technician. He works at an authorised two-wheeler service centre and is learning electric-scooter repair.",
+     "इंदौर के इमरान ने ऑटोमोटिव तकनीशियन की ट्रेनिंग ली। वह दोपहिया के अधिकृत सर्विस सेंटर में काम करते हैं और इलेक्ट्रिक स्कूटर की मरम्मत सीख रहे हैं।"),
+    ("auto_tech", "varanasi", "parent", "Rajesh ji", "m",
+     "Rajesh ji from Varanasi called it 'grease work'. Now his son is the floor supervisor of a car workshop and trains new boys.",
+     "वाराणसी के राजेश जी इसे 'ग्रीस का काम' कहते थे। आज उनका बेटा कार वर्कशॉप का फ़्लोर सुपरवाइज़र है और नए लड़कों को सिखाता है।"),
+    ("retail", "patna", "alumni", "Sana", "f",
+     "Sana from Patna joined a supermarket in her city as a billing associate. In two years she became the team leader of her floor.",
+     "पटना की सना अपने ही शहर के सुपरमार्केट में बिलिंग एसोसिएट बनीं। दो साल में वह अपने फ़्लोर की टीम लीडर बन गईं।"),
+    ("retail", "gaya", "parent", "Kamla ji", "f",
+     "Kamla ji from Gaya wanted her daughter close to home. The mall job is a ten-minute ride away, with a day shift and a women's staff room.",
+     "गया की कमला जी चाहती थीं कि बेटी घर के पास रहे। मॉल की नौकरी दस मिनट दूर है, दिन की शिफ़्ट और महिलाओं के लिए अलग स्टाफ़ रूम के साथ।"),
+    ("data_entry", "bhopal", "alumni", "Deepika", "f",
+     "Deepika from Bhopal works as a data entry operator at a district hospital and is studying for a BCA through distance learning.",
+     "भोपाल की दीपिका ज़िला अस्पताल में डेटा एंट्री ऑपरेटर हैं और दूरस्थ शिक्षा से बीसीए भी कर रही हैं।"),
+    ("data_entry", "muzaffarpur", "parent", "Vinod ji", "m",
+     "Vinod ji from Muzaffarpur thought computer work meant moving to a big city. His son keeps the records of a farmers' producer company in their own block.",
+     "मुज़फ़्फ़रपुर के विनोद जी सोचते थे कि कंप्यूटर के काम के लिए बड़े शहर जाना पड़ेगा। उनका बेटा अपने ही ब्लॉक में किसान उत्पादक कंपनी का हिसाब रखता है।"),
 ]
 
 SCHEMES = [
@@ -228,7 +318,7 @@ SCHEMES = [
     ("iti", "Government ITI admission", "सरकारी आईटीआई में दाख़िला",
      "Government ITIs charge low fees, and SC/ST/OBC, minority and girl students can apply for state scholarships.",
      "सरकारी आईटीआई की फ़ीस कम है, और SC/ST/OBC, अल्पसंख्यक और छात्राएँ राज्य की छात्रवृत्ति के लिए आवेदन कर सकती हैं।",
-     ["electrician", "ac_tech"], "https://dgt.gov.in/"),
+     ["electrician", "ac_tech", "auto_tech"], "https://dgt.gov.in/"),
     ("naps", "National Apprenticeship Promotion Scheme", "राष्ट्रीय अप्रेंटिसशिप प्रोत्साहन योजना",
      "After training, apprentices learn on the job and are paid a monthly stipend, part of it supported by the government.",
      "ट्रेनिंग के बाद अप्रेंटिस काम करते हुए सीखते हैं और हर महीने स्टाइपेंड पाते हैं, जिसका कुछ हिस्सा सरकार देती है।",
@@ -240,7 +330,7 @@ SCHEMES = [
     ("mudra", "PM MUDRA Yojana", "पीएम मुद्रा योजना",
      "Loans without collateral to start a small business such as a repair shop, salon or stitching unit.",
      "छोटा काम शुरू करने के लिए बिना गारंटी का लोन, जैसे रिपेयर की दुकान, पार्लर या सिलाई यूनिट।",
-     ["electrician", "ac_tech", "tailoring", "beauty", "solar"], "https://www.mudra.org.in/"),
+     ["electrician", "ac_tech", "tailoring", "beauty", "solar", "auto_tech", "retail"], "https://www.mudra.org.in/"),
     ("suryamitra", "Suryamitra programme", "सूर्यमित्र कार्यक्रम",
      "A solar technician programme run by the National Institute of Solar Energy, free for selected candidates.",
      "राष्ट्रीय सौर ऊर्जा संस्थान का सोलर तकनीशियन कार्यक्रम, चुने गए उम्मीदवारों के लिए मुफ़्त।",
@@ -249,15 +339,15 @@ SCHEMES = [
 
 # District-level concern mix and baseline resistance for the synthetic sessions.
 PROFILES = {
-    "lucknow": (45, 0.35, {"income": .3, "social_status": .25, "degree_better": .25, "job_security": .2}),
-    "varanasi": (33, 0.45, {"social_status": .35, "degree_better": .25, "income": .2, "safety": .2}),
-    "gorakhpur": (28, 0.55, {"distance": .35, "income": .25, "job_security": .2, "social_status": .2}),
-    "patna": (42, 0.50, {"degree_better": .4, "social_status": .25, "job_security": .2, "income": .15}),
-    "gaya": (30, 0.62, {"safety": .35, "distance": .3, "social_status": .2, "cost": .15}),
-    "muzaffarpur": (27, 0.58, {"safety": .3, "social_status": .3, "distance": .2, "income": .2}),
-    "bhopal": (34, 0.38, {"income": .3, "job_security": .3, "degree_better": .2, "cost": .2}),
-    "indore": (38, 0.28, {"income": .35, "job_security": .3, "distance": .15, "degree_better": .2}),
-    "rewa": (23, 0.60, {"social_status": .35, "distance": .25, "cost": .2, "safety": .2}),
+    "lucknow": (96, 0.35, {"income": .3, "social_status": .25, "degree_better": .25, "job_security": .2}),
+    "varanasi": (71, 0.45, {"social_status": .35, "degree_better": .25, "income": .2, "safety": .2}),
+    "gorakhpur": (54, 0.55, {"distance": .35, "income": .25, "job_security": .2, "social_status": .2}),
+    "patna": (88, 0.50, {"degree_better": .4, "social_status": .25, "job_security": .2, "income": .15}),
+    "gaya": (66, 0.62, {"safety": .35, "distance": .3, "social_status": .2, "cost": .15}),
+    "muzaffarpur": (44, 0.58, {"safety": .3, "social_status": .3, "distance": .2, "income": .2}),
+    "bhopal": (73, 0.38, {"income": .3, "job_security": .3, "degree_better": .2, "cost": .2}),
+    "indore": (82, 0.28, {"income": .35, "job_security": .3, "distance": .15, "degree_better": .2}),
+    "rewa": (37, 0.60, {"social_status": .35, "distance": .25, "cost": .2, "safety": .2}),
 }
 
 DEMO_ESCALATIONS = [
@@ -309,15 +399,19 @@ def _pick(rng: random.Random, weights: dict) -> str:
     return list(weights)[-1]
 
 
+TABLES = ("districts", "trades", "outcomes", "stories", "schemes", "sessions", "messages", "escalations", "updates",
+          "users", "auth_tokens", "otp_requests", "student_profiles", "consents", "career_dna", "simulations",
+          "simulation_attempts", "guardian_links", "consensus", "centres", "classes", "report_shares", "events")
+
+
 def seed(force: bool = False) -> None:
     db.init_db()
-    if db.count("districts") and not force:
+    if db.count("districts") and db.count("users") and not force:
         return
-    if force:
-        with db.connect() as c:
-            for t in ("districts", "trades", "outcomes", "stories", "schemes", "sessions", "messages",
-                      "escalations", "updates"):
-                c.execute(f"DELETE FROM {t}")
+    # an older SAATH-only database has no UDAAN accounts: rebuild all demo data once
+    with db.connect() as c:
+        for t in TABLES:
+            c.execute(f"DELETE FROM {t}")
 
     rng = random.Random(26241)
     db.insert_many("districts", [dict(zip(("id", "name_en", "name_hi", "state", "state_hi", "lat", "lng"), d))
@@ -352,6 +446,7 @@ def seed(force: bool = False) -> None:
                                for s in SCHEMES])
     _seed_sessions(rng)
     _seed_escalations()
+    seed_udaan.seed(rng)
 
 
 def _cumulative(sources):

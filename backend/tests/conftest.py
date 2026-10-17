@@ -17,3 +17,12 @@ def client():
     from app.main import app
     with TestClient(app) as c:
         yield c
+
+
+@pytest.fixture(scope="session")
+def login(client):
+    """login("admin") -> request headers for that demo account."""
+    def _login(role):
+        token = client.post(f"/api/auth/demo/{role}").json()["token"]
+        return {"Authorization": f"Bearer {token}"}
+    return _login

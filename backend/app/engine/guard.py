@@ -5,7 +5,8 @@ percentage and every rupee amount must match a value from the facts the reply wa
 """
 import re
 
-ALWAYS_ALLOWED = {14416}  # Tele-MANAS helpline
+# Tele-MANAS 14416, KIRAN 1800-599-0019 (read as three groups) and the 112 emergency number
+ALWAYS_ALLOWED = {14416, 1800, 599, 19, 18005990019, 112}
 SMALL = 12
 
 _DEV_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")

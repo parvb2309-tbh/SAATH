@@ -1,4 +1,4 @@
-"""Family-facing API: metadata, sessions, chat turns, pathway, manual escalation, parent updates."""
+"""SAATH chat API (the companion inside UDAAN): metadata, sessions, chat turns, risk referrals."""
 import uuid
 from typing import Literal
 
@@ -6,7 +6,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from .. import db
-from ..engine import quiz, responder, templates
+from .. import catalog
+from ..engine import responder, templates
 from ..engine.concerns import LABELS, OBJECTIONS
 from ..llm import gemini
 
@@ -24,20 +25,25 @@ SCHOOLING = [("8", "Class 8", "8वीं"), ("10", "Class 10", "10वीं"), 
 
 @router.get("/meta")
 def meta():
+    trades = db.query("SELECT id, name_en, name_hi, icon, sector_en, sector_hi, nsqf_level, duration_months, "
+                      "min_schooling FROM trades")
+    for t in trades:
+        prof = catalog.TRADE_PROFILES.get(t["id"], {})
+        t.update(sim=prof.get("sim"), setting=prof.get("setting"))
     return {
         "districts": db.query("SELECT * FROM districts ORDER BY state, name_en"),
-        "trades": db.query("SELECT id, name_en, name_hi, icon, sector_en, sector_hi, nsqf_level, duration_months, "
-                           "min_schooling FROM trades"),
+        "trades": trades,
         "concerns": LABELS, "objections": OBJECTIONS,
         "income_brackets": [{"id": i, "en": e, "hi": h} for i, e, h in INCOME],
         "schooling": [{"id": i, "en": e, "hi": h} for i, e, h in SCHOOLING],
+        "education": [{"id": i, "en": e, "hi": h} for i, e, h in catalog.EDUCATION],
+        "study_modes": [{"id": i, "en": e, "hi": h} for i, e, h in catalog.STUDY_MODES],
+        "riasec": catalog.RIASEC, "riasec_labels": catalog.RIASEC_LABELS, "riasec_items": catalog.RIASEC_ITEMS,
+        "competency_labels": catalog.COMPETENCY_LABELS, "simulations": catalog.SIMULATIONS,
+        "priorities": catalog.PRIORITIES,
+        "barriers": {k: {"en": v["en"], "hi": v["hi"]} for k, v in catalog.BARRIERS.items()},
         "engine": gemini.status(),
     }
-
-
-@router.get("/quiz")
-def get_quiz():
-    return quiz.public()
 
 
 class SessionIn(BaseModel):
@@ -51,7 +57,6 @@ class SessionIn(BaseModel):
     consent: bool
     phone: str = ""
     learner_age: int | None = Field(default=None, ge=10, le=60)
-    quiz_answers: list[int | None] | None = None
 
 
 @router.post("/sessions")
@@ -63,22 +68,9 @@ def create_session(body: SessionIn):
     if body.trade_id and not db.get_trade(body.trade_id):
         raise HTTPException(400, "Unknown trade")
     sid = uuid.uuid4().hex[:12]
-    data = body.model_dump(exclude={"quiz_answers"})
-    result = quiz.score(body.quiz_answers) if body.quiz_answers else None
-    if result and not data["trade_id"] and result["matches"]:
-        data["trade_id"] = result["matches"][0]["trade_id"]
-    row = {**data, "id": sid, "created_at": db.now(), "consent": 1, "status": "active",
-           "first_sentiment": result["keenness"] if result else None,
-           "last_sentiment": result["keenness"] if result else None, "synthetic": 0,
-           "quiz": {"answers": body.quiz_answers, "matches": result["matches"], "worries": result["worries"],
-                    "keenness": result["keenness"]} if result else None}
+    row = {**body.model_dump(), "id": sid, "created_at": db.now(), "consent": 1, "status": "active",
+           "first_sentiment": None, "last_sentiment": None, "synthetic": 0, "trade_changes": 0, "halted": 0}
     db.insert("sessions", row)
-    if result and result["picked"]:
-        # the quiz answers become the first entry of the conversation, so counsellors and the dashboard see them
-        db.insert("messages", {"session_id": sid, "created_at": db.now(), "role": "user", "speaker": "family",
-                               "text": quiz.summary_text(result["picked"], body.language), "lang": body.language,
-                               "concerns": result["worries"] or ["other"], "sentiment": result["keenness"],
-                               "engine": "quiz", "cards": []})
     responder.start_message(sid)
     return session_detail(sid)
 
@@ -107,9 +99,12 @@ def patch_session(sid: str, body: SessionPatch):
     changes = body.model_dump(exclude_none=True)
     if "trade_id" in changes and not db.get_trade(changes["trade_id"]):
         raise HTTPException(400, "Unknown trade")
+    switched = "trade_id" in changes and changes["trade_id"] != s.get("trade_id")
+    if switched and s.get("trade_id"):
+        changes["trade_changes"] = (s.get("trade_changes") or 0) + 1
     if changes:
         db.update("sessions", "id", sid, changes)
-    if "trade_id" in changes and changes["trade_id"] != s.get("trade_id"):
+    if switched:
         responder.start_message(sid)
     return session_detail(sid)
 
@@ -141,6 +136,23 @@ def manual_escalate(sid: str, body: EscalateIn):
     if body.phone:
         db.update("sessions", "id", sid, {"phone": body.phone})
     return responder.escalate(sid, "manual", 2, body.phone, body.callback_time, body.note)
+
+
+class ReferralIn(BaseModel):
+    consent: bool
+    phone: str = ""
+
+
+@router.post("/sessions/{sid}/referral")
+def priority_referral(sid: str, body: ReferralIn):
+    """Level 2: a Priority Referral Ticket is created only after the learner agrees."""
+    if not db.get_session(sid):
+        raise HTTPException(404, "Session not found")
+    if not body.consent:
+        return {"created": False}
+    if body.phone:
+        db.update("sessions", "id", sid, {"phone": body.phone})
+    return {"created": True, **responder.escalate(sid, "distress", 1, body.phone, consented=True)}
 
 
 @router.get("/sessions/{sid}/pathway")

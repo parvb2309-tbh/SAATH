@@ -60,10 +60,27 @@ KEYWORDS: dict[str, list[str]] = {
         "phone karo", "talk to someone", "talk to a person", "baat karni hai", "baat karna hai",
         "काउंसलर", "इंसान", "किसी से बात", "कॉल करें", "फ़ोन करें", "फोन करें", "बात करनी है", "बात करना है",
     ],
+    # Level 3: explicit self-harm intent or abuse. Always routed to helplines and the safeguarding desk.
+    "crisis": [
+        "suicide", "kill myself", "end my life", "mar jaun", "mar jau", "mar jaungi", "jaan de", "zinda nahi",
+        "no reason to live", "hurt myself", "khud ko nuksan", "maarte hain", "marte hain mujhe", "beat me", "beats me",
+        "abuse", "abused", "maar peet", "shoshan",
+        "आत्महत्या", "मर जाऊँ", "मर जाऊं", "जान दे", "ज़िंदा नहीं", "जिंदा नहीं", "ख़ुद को नुक़सान", "मारते हैं", "मारपीट",
+        "मार-पीट", "शोषण",
+    ],
+    # Level 2: severe anxiety about family pressure or dropping out.
     "distress": [
-        "suicide", "kill myself", "mar jaun", "mar jau", "jaan de", "khatam kar", "zinda nahi", "no reason to live",
-        "hopeless", "depressed", "depression", "bahut pareshan", "mann nahi lagta",
-        "आत्महत्या", "मर जाऊँ", "मर जाऊं", "जान दे", "ख़त्म कर", "खत्म कर", "ज़िंदा नहीं", "बहुत परेशान", "डिप्रेशन",
+        "hopeless", "depressed", "depression", "bahut pareshan", "mann nahi lagta", "can't take it", "cant take it",
+        "too much pressure", "bahut pressure", "bahut dabav", "zabardasti", "padhai chhod", "school chhod",
+        "drop out", "dropout", "rota rehta", "roti rehti", "neend nahi", "anxiety", "panic",
+        "बहुत परेशान", "डिप्रेशन", "बहुत दबाव", "ज़बरदस्ती", "जबरदस्ती", "पढ़ाई छोड़", "स्कूल छोड़", "नींद नहीं",
+        "घबराहट", "रोती रहती", "रोता रहता",
+    ],
+    # Level 1 signal: hesitation between options.
+    "confused": [
+        "confused", "can't decide", "cant decide", "not sure which", "samajh nahi aa raha", "samajh nahi aata",
+        "kaun sa chunu", "kya chunu", "decide nahi", "dilemma", "uljhan",
+        "समझ नहीं आ रहा", "कौन सा चुनूँ", "कौन-सा चुनूँ", "क्या चुनूँ", "तय नहीं कर", "उलझन",
     ],
     "greeting": [
         "hello", "namaste", "namaskar", "pranam", "good morning",
@@ -93,11 +110,14 @@ def classify(text: str) -> list[str]:
             scores[concern] = hits
     if not scores:
         return ["other"]
+    if "crisis" in scores:
+        scores.pop("distress", None)
     # A greeting alone is a greeting; a greeting plus a real question is the question.
     if len(scores) > 1:
         scores.pop("greeting", None)
     # Mentioning the course is context, not a concern, when a real objection is present.
     if "course_info" in scores and len(scores) > 1:
         scores.pop("course_info")
-    ranked = sorted(scores, key=lambda c: (-scores[c], ALL.index(c)))
+    urgency = {"crisis": 0, "distress": 1}
+    ranked = sorted(scores, key=lambda c: (urgency.get(c, 2), -scores[c], ALL.index(c)))
     return ranked[:3]

@@ -1,4 +1,4 @@
-"""SQLite storage and small repository helpers.
+"""SQLite storage and small repository helpers (UDAAN prototype).
 
 Plain stdlib sqlite3 keeps the prototype dependency-free; every helper opens its own
 connection so FastAPI's threadpool can call them safely. Swapping to PostgreSQL later
@@ -56,11 +56,61 @@ CREATE TABLE IF NOT EXISTS updates (
     id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT, created_at TEXT, kind TEXT,
     text_en TEXT, text_hi TEXT
 );
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY, role TEXT, mobile_hash TEXT, name TEXT, relation TEXT, preferred_lang TEXT,
+    district_id TEXT, created_at TEXT, synthetic INTEGER DEFAULT 0, demo_key TEXT
+);
+CREATE TABLE IF NOT EXISTS auth_tokens (token TEXT PRIMARY KEY, user_id TEXT, created_at TEXT);
+CREATE TABLE IF NOT EXISTS otp_requests (mobile_hash TEXT PRIMARY KEY, code_hash TEXT, created_at TEXT, tries INTEGER);
+CREATE TABLE IF NOT EXISTS student_profiles (
+    id TEXT PRIMARY KEY, user_id TEXT, district_id TEXT, education_level TEXT, study_mode TEXT,
+    budget_limit INTEGER, max_travel_km INTEGER, needs_stipend INTEGER, min_earning INTEGER, max_months INTEGER,
+    work_setting TEXT, age INTEGER, gender TEXT, chosen_trade TEXT, private_notes TEXT, class_id TEXT,
+    flags TEXT, stage INTEGER, created_at TEXT, synthetic INTEGER DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS consents (
+    user_id TEXT PRIMARY KEY, ai_guidance INTEGER, counsellor_share INTEGER, parent_link INTEGER,
+    research INTEGER, guardian_approved INTEGER, updated_at TEXT
+);
+CREATE TABLE IF NOT EXISTS career_dna (
+    profile_id TEXT PRIMARY KEY, riasec TEXT, answers TEXT, competencies TEXT, confidence TEXT,
+    exploration TEXT, updated_at TEXT
+);
+CREATE TABLE IF NOT EXISTS simulations (
+    id TEXT PRIMARY KEY, trade_id TEXT, nsqf_level INTEGER, title_en TEXT, title_hi TEXT, config TEXT
+);
+CREATE TABLE IF NOT EXISTS simulation_attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, profile_id TEXT, sim_id TEXT, started_at TEXT, completed_at TEXT,
+    time_s REAL, accuracy REAL, safety_score REAL, telemetry TEXT
+);
+CREATE TABLE IF NOT EXISTS guardian_links (
+    id TEXT PRIMARY KEY, student_id TEXT, parent_id TEXT, code TEXT, consent_status TEXT,
+    shared_permissions TEXT, linked_at TEXT, created_at TEXT
+);
+CREATE TABLE IF NOT EXISTS consensus (
+    link_id TEXT PRIMARY KEY, trade_id TEXT, student_answers TEXT, parent_answers TEXT, plan TEXT,
+    completed INTEGER DEFAULT 0, updated_at TEXT
+);
+CREATE TABLE IF NOT EXISTS centres (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, district_id TEXT, name_en TEXT, name_hi TEXT, kind TEXT,
+    trades TEXT, capacity INTEGER, distance_km INTEGER, women_hostel INTEGER
+);
+CREATE TABLE IF NOT EXISTS classes (id TEXT PRIMARY KEY, teacher_id TEXT, name TEXT, school TEXT, district_id TEXT);
+CREATE TABLE IF NOT EXISTS report_shares (
+    token TEXT PRIMARY KEY, profile_id TEXT, trade_id TEXT, created_at TEXT, views INTEGER DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, profile_id TEXT, kind TEXT, data TEXT, created_at TEXT
+);
 CREATE INDEX IF NOT EXISTS ix_messages_session ON messages(session_id);
+CREATE INDEX IF NOT EXISTS ix_attempts_profile ON simulation_attempts(profile_id);
+CREATE INDEX IF NOT EXISTS ix_events_profile ON events(profile_id, kind);
 CREATE INDEX IF NOT EXISTS ix_outcomes_td ON outcomes(trade_id, district_id);
 """
 
-JSON_COLUMNS = {"members", "concerns", "cards", "ladder", "trades", "quiz"}
+JSON_COLUMNS = {"members", "concerns", "cards", "ladder", "trades", "quiz", "sources", "riasec", "answers",
+                "competencies", "confidence", "exploration", "config", "telemetry", "shared_permissions",
+                "student_answers", "parent_answers", "plan", "data", "flags"}
 
 
 def now() -> str:
@@ -97,7 +147,12 @@ def _encode(values: dict) -> dict:
 
 
 # Columns added after the first release; existing databases get them on start-up.
-MIGRATIONS = {"sessions": {"learner_age": "INTEGER", "quiz": "TEXT"}}
+MIGRATIONS = {
+    "sessions": {"learner_age": "INTEGER", "quiz": "TEXT", "user_id": "TEXT", "profile_id": "TEXT",
+                 "trade_changes": "INTEGER DEFAULT 0", "halted": "INTEGER DEFAULT 0"},
+    "messages": {"sources": "TEXT"},
+    "escalations": {"risk_level": "INTEGER DEFAULT 1", "first_contact_at": "TEXT", "consented": "INTEGER DEFAULT 1"},
+}
 
 
 def init_db() -> None:
@@ -201,6 +256,10 @@ def get_session(session_id: str) -> dict | None:
 
 def get_messages(session_id: str) -> list[dict]:
     return query("SELECT * FROM messages WHERE session_id = ? ORDER BY id", (session_id,))
+
+
+def event(kind: str, user_id: str | None = None, profile_id: str | None = None, data: dict | None = None) -> None:
+    insert("events", {"user_id": user_id, "profile_id": profile_id, "kind": kind, "data": data or {}, "created_at": now()})
 
 
 def open_escalation(session_id: str) -> dict | None:

@@ -1,45 +1,42 @@
 import { CircleMarker, MapContainer, TileLayer, Tooltip } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
 
-// Sequential single-hue (orange) ramp: light = low resistance, dark = high resistance.
-export const RESIST_RAMP = [
-  { max: 30, color: '#fbd5b5', label: '< 30%' },
-  { max: 40, color: '#f6ab74', label: '30–40%' },
-  { max: 50, color: '#e8833a', label: '40–50%' },
-  { max: 60, color: '#bb5a17', label: '50–60%' },
-  { max: 101, color: '#7a3508', label: '≥ 60%' },
-]
-export const resistColor = (v) => (v === null || v === undefined ? '#c9ced6' : RESIST_RAMP.find((s) => v < s.max).color)
+// Sequential single-hue ramps (light = low, dark = high).
+export const RAMPS = {
+  orange: ['#fbe3c7', '#f6c48a', '#f2a541', '#c9821f', '#8f5a10'],
+  teal: ['#d3eef0', '#9fd9dd', '#4fb6bd', '#087f8c', '#05505a'],
+}
+export const SUPPRESSED = '#c3ccd7'
 
-export default function DistrictMap({ districts, concerns }) {
+export function bucket(value, breaks) {
+  if (value === null || value === undefined) return -1
+  const i = breaks.findIndex((b) => value < b)
+  return i === -1 ? breaks.length : i
+}
+
+// districts: [{ id, lat, lng, ... }]; colorOf/sizeOf/tip are per-district callbacks.
+export default function DistrictMap({ districts, colorOf, sizeOf, tip, legend, height }) {
   return (
     <div className="map-wrap">
-      <MapContainer center={[25.2, 80.6]} zoom={6} scrollWheelZoom={false} className="map">
+      <MapContainer center={[25.2, 80.6]} zoom={6} scrollWheelZoom={false} className="map" style={height ? { height } : undefined}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {districts.map((d) => (
-          <CircleMarker
-            key={d.id}
-            center={[d.lat, d.lng]}
-            radius={8 + Math.sqrt(d.sessions || 0) * 2.2}
-            pathOptions={{ color: '#ffffff', weight: 2, fillColor: resistColor(d.resistance), fillOpacity: 0.92 }}
-          >
-            <Tooltip direction="top" offset={[0, -6]}>
-              <strong>{d.name_en}</strong>, {d.state}<br />
-              Resistance: <strong>{d.resistance ?? '—'}%</strong> of {d.sessions} families<br />
-              Top worry: {d.top_concern ? `${concerns[d.top_concern].icon} ${concerns[d.top_concern].en}` : '—'}
-            </Tooltip>
+          <CircleMarker key={d.id} center={[d.lat, d.lng]} radius={sizeOf ? sizeOf(d) : 12}
+            pathOptions={{ color: '#ffffff', weight: 2, fillColor: colorOf(d), fillOpacity: 0.95 }}>
+            <Tooltip direction="top" offset={[0, -6]}>{tip(d)}</Tooltip>
           </CircleMarker>
         ))}
       </MapContainer>
-      <div className="map-legend" aria-label="Legend">
-        <div className="legend-title">Family resistance</div>
-        {RESIST_RAMP.map((s) => (
-          <div key={s.label} className="legend-row"><span className="swatch" style={{ background: s.color }} />{s.label}</div>
-        ))}
-        <div className="legend-note">Circle size = number of families</div>
-      </div>
+      {legend && (
+        <div className="map-legend" aria-label="Legend">
+          <div className="legend-title">{legend.title}</div>
+          {legend.rows.map((r) => <div key={r.label} className="legend-row"><span className="swatch" style={{ background: r.color }} />{r.label}</div>)}
+          {legend.note && <div className="legend-note">{legend.note}</div>}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,381 +1,486 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { BookOpenCheck, Building2, Check, ChevronRight, GraduationCap, Info, Landmark, ShieldCheck, Users } from 'lucide-react'
 import { api, storage } from '../lib/api'
-import { pick, STRINGS, useLang, useT } from '../lib/i18n'
-import { speak, stopSpeaking } from '../lib/speech'
+import { pick, tr, useLang, useT } from '../lib/i18n'
+import { useSession } from '../lib/session'
+import Hexagon from '../components/Hexagon'
+import Icon from '../components/Icon'
 
-const MEMBER_ICON = { learner: '🧑‍🎓', mother: '👩', father: '👨', guardian: '🧓' }
-const WHO = {
-  learner: { icon: '🧑‍🎓', en: 'Learner answers', hi: 'बच्चा जवाब दे' },
-  parents: { icon: '👨‍👩', en: 'Parents answer', hi: 'माता-पिता जवाब दें' },
-  family: { icon: '👨‍👩‍👧', en: 'Whole family answers', hi: 'पूरा परिवार जवाब दे' },
+const S = {
+  heroTitle: { en: 'Choose a trade with evidence, not guesswork.', hi: 'अंदाज़े से नहीं, सबूत से हुनर चुनें।' },
+  heroLede: {
+    en: 'UDAAN helps students try real trade tasks, and gives families verified figures on fees, earnings and growth, so the decision is made together.',
+    hi: 'उड़ान विद्यार्थियों को असली काम करके देखने देता है, और परिवार को फ़ीस, कमाई और तरक़्क़ी के पक्के आँकड़े देता है, ताकि फ़ैसला मिलकर हो।',
+  },
+  p1: { en: 'Discover', hi: 'खोजें' },
+  p1s: { en: 'Find what suits you through your Career DNA, not marks alone.', hi: 'सिर्फ़ नंबर नहीं, अपने करियर DNA से जानें कि क्या आपको जँचता है।' },
+  p2: { en: 'Experience', hi: 'करके देखें' },
+  p2s: { en: 'Wire a circuit, read a BP gauge or fix a solar array in a short simulation.', hi: 'छोटे सिमुलेशन में सर्किट जोड़ें, बीपी नापें या सोलर ठीक करें।' },
+  p3: { en: 'Plan together', hi: 'मिलकर तय करें' },
+  p3s: { en: 'Parents get a proof report and a 5-year cost comparison; the family agrees a plan.', hi: 'माता-पिता को सबूत वाली रिपोर्ट और 5 साल की तुलना मिलती है; परिवार मिलकर योजना बनाता है।' },
+  getStarted: { en: 'Get started', hi: 'शुरू करें' },
+  haveAccount: { en: 'I already have an account', hi: 'मेरा खाता पहले से है' },
+  stepOf: { en: 'Step {n} of {m}', hi: 'चरण {n} / {m}' },
+  whoAreYou: { en: 'Who is using UDAAN?', hi: 'उड़ान कौन इस्तेमाल कर रहा है?' },
+  whoSub: { en: 'Each role sees different things. You stay in control of what is shared.', hi: 'हर भूमिका अलग चीज़ें देखती है। क्या साझा हो, यह आप तय करते हैं।' },
+  r_student: { en: 'Explore trades, try simulations and plan your path. You decide what your family can see.', hi: 'ट्रेड देखें, सिमुलेशन करें, अपना रास्ता बनाएँ। परिवार क्या देखे, आप तय करें।' },
+  r_parent: { en: "See your child's shared progress, proof reports and cost comparisons. Never their private notes.", hi: 'बच्चे की साझा प्रगति, सबूत रिपोर्ट और ख़र्च की तुलना देखें। उनके निजी नोट्स कभी नहीं।' },
+  r_counsellor: { en: 'Priority referral queue and case summaries students agreed to share.', hi: 'प्राथमिकता वाली कतार और वे केस जिन्हें विद्यार्थी ने साझा करने दिया।' },
+  r_teacher: { en: 'Class-level interest and engagement. No private conversations.', hi: 'कक्षा स्तर की रुचि और भागीदारी। कोई निजी बातचीत नहीं।' },
+  r_admin: { en: 'District analytics only, anonymised and hidden below 50 people.', hi: 'सिर्फ़ ज़िला स्तर के आँकड़े, बिना नाम, 50 से कम लोगों पर छिपे हुए।' },
+  langTitle: { en: 'Choose your language', hi: 'अपनी भाषा चुनें' },
+  langSub: { en: 'You can switch at any time from the top bar.', hi: 'ऊपर की पट्टी से कभी भी बदल सकते हैं।' },
+  soon: { en: 'Phase 3', hi: 'चरण 3' },
+  loginTitle: { en: 'Sign in with your mobile number', hi: 'मोबाइल नंबर से साइन इन करें' },
+  loginSub: { en: 'Aadhaar is not needed. We store only a scrambled form of your number.', hi: 'आधार की ज़रूरत नहीं। हम आपका नंबर सिर्फ़ बदले हुए रूप में रखते हैं।' },
+  mobile: { en: 'Mobile number', hi: 'मोबाइल नंबर' },
+  sendCode: { en: 'Send code', hi: 'कोड भेजें' },
+  code: { en: '6-digit code', hi: '6 अंकों का कोड' },
+  verify: { en: 'Verify and continue', hi: 'पुष्टि करें और आगे बढ़ें' },
+  demoCode: { en: 'Prototype: no SMS is sent. Your code is', hi: 'प्रोटोटाइप: कोई SMS नहीं जाता। आपका कोड है' },
+  yourName: { en: 'Your first name', hi: 'आपका नाम' },
+  orDemo: { en: 'Or open a demo account', hi: 'या डेमो खाता खोलें' },
+  staffNote: { en: 'Staff accounts come from the institution (SSO in Phase 2). Use the demo account for this prototype.', hi: 'स्टाफ़ खाते संस्था देती है (चरण 2 में SSO)। इस प्रोटोटाइप में डेमो खाता इस्तेमाल करें।' },
+  openDemo: { en: 'Open demo {role} account', hi: 'डेमो {role} खाता खोलें' },
+  demoRiya: { en: 'Riya, student in Gaya', hi: 'रिया, गया की विद्यार्थी' },
+  demoSunita: { en: 'Sunita, her mother', hi: 'सुनीता, उसकी माँ' },
+  aboutYou: { en: 'A little about you', hi: 'आपके बारे में थोड़ा' },
+  aboutSub: { en: 'Used to find centres near you and courses you can join.', hi: 'पास के सेंटर और आपके लायक कोर्स ढूँढने के लिए।' },
+  district: { en: 'District', hi: 'ज़िला' },
+  chooseDistrict: { en: 'Choose district', hi: 'ज़िला चुनें' },
+  education: { en: 'Education so far', hi: 'अब तक की पढ़ाई' },
+  studyMode: { en: 'How would you like to study?', hi: 'कैसे पढ़ना चाहेंगे?' },
+  age: { en: 'Age', hi: 'उम्र' },
+  years: { en: 'years', hi: 'साल' },
+  gender: { en: 'Gender', hi: 'लिंग' },
+  girl: { en: 'Girl', hi: 'लड़की' },
+  boy: { en: 'Boy', hi: 'लड़का' },
+  noSay: { en: 'Prefer not to say', hi: 'नहीं बताना' },
+  iAm: { en: 'I am the', hi: 'मैं हूँ' },
+  consentTitle: { en: 'Your privacy choices', hi: 'आपकी निजता के विकल्प' },
+  consentSub: { en: 'Each choice is separate. You can change them later in Settings.', hi: 'हर विकल्प अलग है। बाद में सेटिंग में बदल सकते हैं।' },
+  c_ai: { en: 'AI guidance from SAATH', hi: 'साथ से एआई सलाह' },
+  c_ai_s: { en: 'SAATH answers questions using verified records. Without this, the chat stays off.', hi: 'साथ पक्के रिकॉर्ड से जवाब देती है। इसके बिना चैट बंद रहेगी।' },
+  c_counsellor: { en: 'Share my profile with a counsellor', hi: 'काउंसलर को मेरी प्रोफ़ाइल दिखे' },
+  c_counsellor_s: { en: 'Only when you ask for help: your Career DNA and recommendation reasons.', hi: 'सिर्फ़ जब आप मदद माँगें: आपका करियर DNA और सुझाव के कारण।' },
+  c_parent: { en: 'Link with a parent or guardian', hi: 'माता-पिता से जोड़ें' },
+  c_parent_s: { en: 'They see only what you allow. Your private notes are never shared.', hi: 'वे वही देखेंगे जो आप चाहें। आपके निजी नोट्स कभी नहीं।' },
+  c_research: { en: 'Help improve local training', hi: 'स्थानीय ट्रेनिंग बेहतर बनाने में मदद' },
+  c_research_s: { en: 'Anonymised counts only, never shown for groups under 50 people. Never sold.', hi: 'सिर्फ़ बिना नाम की गिनती, 50 से कम के समूह पर कभी नहीं दिखती। कभी बेची नहीं जाती।' },
+  minorNote: { en: 'You are under 18, so a parent or guardian must approve. After setup, share your family code with them.', hi: 'आप 18 से कम हैं, इसलिए माता-पिता की मंज़ूरी चाहिए। सेटअप के बाद उन्हें अपना फ़ैमिली कोड दें।' },
+  dnaTitle: { en: 'Build your Career DNA', hi: 'अपना करियर DNA बनाएँ' },
+  dnaSub: { en: 'How do you feel about each activity? Go with your first reaction.', hi: 'हर काम के बारे में आपको कैसा लगता है? पहली भावना से चुनें।' },
+  like: { en: 'Like it', hi: 'पसंद' },
+  meh: { en: 'Not sure', hi: 'पता नहीं' },
+  no: { en: 'Not for me', hi: 'पसंद नहीं' },
+  answered: { en: '{n} of {m} answered', hi: '{m} में से {n} जवाब' },
+  confidence: { en: 'How confident are you with…', hi: 'आप कितने भरोसे में हैं…' },
+  c_numerical: { en: 'Numbers and calculation', hi: 'गिनती और हिसाब' },
+  c_spatial: { en: 'Shapes, maps and angles', hi: 'आकार, नक्शे और कोण' },
+  c_digital: { en: 'Phones and computers', hi: 'फ़ोन और कंप्यूटर' },
+  low: { en: 'Not yet', hi: 'अभी नहीं' },
+  high: { en: 'Very', hi: 'बहुत' },
+  seeResults: { en: 'See my matches', hi: 'मेरे मेल देखें' },
+  needMore: { en: 'Answer at least 12 to continue', hi: 'आगे बढ़ने के लिए कम से कम 12 जवाब दें' },
+  yourShape: { en: 'Your interest shape', hi: 'आपकी रुचि का आकार' },
+  shapeHint: { en: 'Updates as you answer.', hi: 'जवाब देते ही बदलता है।' },
 }
-const STEP_KEY = 'saath.onboarding'
 
-// Opening flow: hook → how it works (+ consent) → family profile → "journey begins" → quiz → result.
-export default function Onboarding({ meta, onStart }) {
-  const { lang } = useLang()
-  const saved = useMemo(() => {
-    try { return JSON.parse(storage.get(STEP_KEY) || 'null') } catch { return null }
-  }, [])
-  const [step, setStep] = useState(saved?.step && saved.step !== 'begin' ? saved.step : 'hook')
-  const [profile, setProfile] = useState(saved?.profile || {
-    members: ['learner'], learner_gender: 'x', learner_age: 17, district_id: '', schooling: '10', income_bracket: 'lt10',
-  })
-  const [answers, setAnswers] = useState(saved?.answers || [])
-  const [questions, setQuestions] = useState(null)
+const ROLES = [
+  ['student', GraduationCap], ['parent', Users], ['counsellor', BookOpenCheck], ['teacher', Building2], ['admin', Landmark],
+]
+const OTHER_LANGS = ['বাংলা', 'मराठी', 'తెలుగు', 'اردو']
 
-  useEffect(() => { api.quiz().then(setQuestions) }, [])
-  useEffect(() => { storage.set(STEP_KEY, JSON.stringify({ step, profile, answers })) }, [step, profile, answers])
-  useEffect(() => () => stopSpeaking(), [])
+export default function Onboarding() {
+  const { me } = useSession()
+  const initial = !me ? 'welcome' : !me.onboarded ? 'details' : !me.consents?.updated_at ? 'consent'
+    : me.user.role === 'student' && !me.has_dna ? 'dna' : 'welcome'
+  const [step, setStep] = useState(initial)
+  const [role, setRole] = useState(me?.user?.role || 'student')
   useEffect(() => { window.scrollTo({ top: 0 }) }, [step])
 
-  const go = (s) => { stopSpeaking(); setStep(s) }
-  const start = async (trade_id) => {
-    const res = await api.createSession({ ...profile, trade_id, language: lang, consent: true, quiz_answers: answers })
-    storage.remove(STEP_KEY)
-    onStart(res.session.id)
-  }
+  const flow = role === 'student' ? ['welcome', 'role', 'language', 'login', 'details', 'consent', 'dna']
+    : role === 'parent' ? ['welcome', 'role', 'language', 'login', 'details', 'consent']
+      : ['welcome', 'role', 'language', 'login']
+  const n = flow.indexOf(step)
+  const go = (s) => setStep(s)
 
   return (
-    <div className={`onb onb-${step}`}>
-      {step === 'hook' && <Hook onNext={() => go('how')} />}
-      {step === 'how' && <How onBack={() => go('hook')} onNext={() => go('profile')} />}
-      {step === 'profile' && <Profile meta={meta} profile={profile} setProfile={setProfile} onBack={() => go('how')} onNext={() => go('begin')} />}
-      {step === 'begin' && <Begin profile={profile} onNext={() => go('quiz')} />}
-      {step === 'quiz' && questions && (
-        <Quiz meta={meta} questions={questions} profile={profile} answers={answers} setAnswers={setAnswers}
-          onBack={() => go('profile')} onDone={() => go('result')} />
-      )}
-      {step === 'result' && questions && (
-        <Result meta={meta} questions={questions} answers={answers} onBack={() => go('quiz')} onStart={start} />
-      )}
+    <div className={`onb ${step === 'dna' ? 'wide' : ''}`}>
+      {step !== 'dna' && <Aside done={n} total={flow.length} />}
+      <main className="onb-main">
+        {step === 'welcome' && <Welcome onStart={() => go('role')} onLogin={() => go('login')} />}
+        {step === 'role' && <RolePick role={role} setRole={setRole} step={n} total={flow.length} onNext={() => go('language')} onBack={() => go('welcome')} />}
+        {step === 'language' && <LanguagePick step={n} total={flow.length} onNext={() => go('login')} onBack={() => go('role')} />}
+        {step === 'login' && <Login role={role} onBack={() => go('language')} onNew={() => go('details')} />}
+        {step === 'details' && <Details role={me?.user?.role || role} onNext={() => go('consent')} />}
+        {step === 'consent' && <Consent onNext={(r) => r === 'student' && go('dna')} />}
+        {step === 'dna' && <DnaStep />}
+      </main>
     </div>
   )
 }
 
-function Hook({ onNext }) {
-  const t = useT()
-  const { lang } = useLang()
-  const stories = STRINGS.hookStories[lang]
+function Aside({ done, total }) {
+  const t = useT(S)
   return (
-    <section className="stage hook">
-      <div className="hook-stories">
-        {stories.map(([name, rest], i) => (
-          <p key={i} className="rise" style={{ '--d': `${0.2 + i * 0.5}s` }}>
-            “<strong className={`hl hl-${i}`}>{name}</strong>{rest}”
-          </p>
-        ))}
-      </div>
-      <h1 className="hook-q rise" style={{ '--d': '1.8s' }}>{t('hookQuestion')}</h1>
-      <div className="hook-sub rise" style={{ '--d': '2.1s' }}>{t('hookSub')}</div>
-      <button className="btn cta rise" style={{ '--d': '2.4s' }} onClick={onNext}>{t('hookCta')} →</button>
-      <div className="hook-note rise" style={{ '--d': '2.6s' }}>{t('hookNote')}</div>
-    </section>
-  )
-}
-
-function How({ onBack, onNext }) {
-  const t = useT()
-  const { lang } = useLang()
-  const [open, setOpen] = useState(false)
-  const rows = STRINGS.howRows[lang]
-  const points = STRINGS.consentPoints[lang]
-  return (
-    <section className="stage how">
-      <TopNav onBack={onBack} />
-      <h1 className="rise">{t('howTitle')}</h1>
-      <div className="how-rows">
-        {rows.map(([icon, title, sub], i) => (
-          <div key={i} className={`how-row rise how-${i}`} style={{ '--d': `${0.15 + i * 0.15}s` }}>
-            <span className="how-icon">{icon}</span>
-            <div><div className="how-title">{title}</div><div className="how-sub">{sub}</div></div>
+    <aside className="onb-aside">
+      <h1>{t('heroTitle')}</h1>
+      <p className="lede">{t('heroLede')}</p>
+      <div className="pillars">
+        {[['p1', 'p1s'], ['p2', 'p2s'], ['p3', 'p3s']].map(([h, s], i) => (
+          <div key={h} className="pillar">
+            <span className="pillar-num">0{i + 1}</span>
+            <div><h3>{t(h)}</h3><p>{t(s)}</p></div>
           </div>
         ))}
       </div>
-      <div className="privacy rise" style={{ '--d': '0.7s' }}>
-        <button className="link" onClick={() => setOpen(!open)} aria-expanded={open}>🔒 {t('privacyTitle')} {open ? '▴' : '▾'}</button>
-        {open && <ul>{points.map((p) => <li key={p}>{p}</li>)}</ul>}
+      <div className="onb-steps" aria-hidden>
+        {Array.from({ length: total }, (_, i) => <span key={i} className={i <= done ? 'done' : ''} />)}
       </div>
-      <div className="row gap center rise" style={{ '--d': '0.8s' }}>
-        <button className="btn ghost" onClick={() => speak([t('howTitle'), ...rows.map((r) => `${r[1]}. ${r[2]}`), ...points].join('. '), lang)}>🔊 {t('readAloud')}</button>
-        <button className="btn cta" onClick={onNext}>{t('agreeContinue')} →</button>
-      </div>
-    </section>
+    </aside>
   )
 }
 
-function Profile({ meta, profile, setProfile, onBack, onNext }) {
-  const t = useT()
-  const { lang } = useLang()
-  const set = (k, v) => setProfile((p) => ({ ...p, [k]: v }))
-  const toggleMember = (m) =>
-    set('members', profile.members.includes(m) ? profile.members.filter((x) => x !== m) : [...profile.members, m])
-  const states = [...new Set(meta.districts.map((d) => d.state))]
-  const ready = profile.members.length > 0 && profile.district_id
-  const age = profile.learner_age
-  const ageMarks = [14, 18, 22, 26, 30]
-
+function Welcome({ onStart, onLogin }) {
+  const t = useT(S)
   return (
-    <section className="stage profile">
-      <TopNav onBack={onBack} />
-      <h1 className="rise">{t('profileTitle')}</h1>
-      <div className="muted center rise">{t('profileSub')}</div>
-      <div className="profile-card rise" style={{ '--d': '0.15s' }}>
-        <fieldset>
-          <legend>{t('whoIsHere')}</legend>
-          <div className="chips big">
-            {['learner', 'mother', 'father', 'guardian'].map((m) => (
-              <button key={m} className={`chip ${profile.members.includes(m) ? 'on' : ''}`} onClick={() => toggleMember(m)} aria-pressed={profile.members.includes(m)}>
-                <span className="chip-icon">{MEMBER_ICON[m]}</span>{t(m)}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-        <fieldset>
-          <legend>{t('learnerIs')}</legend>
-          <div className="chips">
-            {[['m', 'son', '👦'], ['f', 'daughter', '👧'], ['x', 'preferNot', '🙂']].map(([v, k, icon]) => (
-              <button key={v} className={`chip ${profile.learner_gender === v ? 'on' : ''}`} onClick={() => set('learner_gender', v)} aria-pressed={profile.learner_gender === v}>
-                <span className="chip-icon">{icon}</span>{t(k)}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-        <fieldset>
-          <legend>{t('learnerAge')}</legend>
-          <div className="age">
-            <button className="age-btn" onClick={() => set('learner_age', Math.max(14, age - 1))} aria-label="−">‹</button>
-            <div className="age-value"><span>{age}</span><small>{t('years')}</small></div>
-            <button className="age-btn" onClick={() => set('learner_age', Math.min(30, age + 1))} aria-label="+">›</button>
-          </div>
-          <input type="range" min="14" max="30" value={age} onChange={(e) => set('learner_age', Number(e.target.value))} className="age-range" aria-label={t('learnerAge')} />
-          <div className="age-marks">{ageMarks.map((m) => <span key={m} className={m === age ? 'on' : ''}>{m}</span>)}</div>
-        </fieldset>
-        <fieldset>
-          <legend>{t('district')}</legend>
-          <select value={profile.district_id} onChange={(e) => set('district_id', e.target.value)} className="select big">
-            <option value="">{t('chooseDistrict')}</option>
-            {states.map((s) => (
-              <optgroup key={s} label={lang === 'hi' ? meta.districts.find((d) => d.state === s).state_hi : s}>
-                {meta.districts.filter((d) => d.state === s).map((d) => <option key={d.id} value={d.id}>{pick(d, lang)}</option>)}
-              </optgroup>
-            ))}
-          </select>
-        </fieldset>
-        <div className="two-col">
-          <fieldset>
-            <legend>{t('schooling')}</legend>
-            <div className="chips">
-              {meta.schooling.map((s) => (
-                <button key={s.id} className={`chip ${profile.schooling === s.id ? 'on' : ''}`} onClick={() => set('schooling', s.id)}>{s[lang]}</button>
-              ))}
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend>{t('income')}</legend>
-            <div className="chips">
-              {meta.income_brackets.map((s) => (
-                <button key={s.id} className={`chip ${profile.income_bracket === s.id ? 'on' : ''}`} onClick={() => set('income_bracket', s.id)}>{s[lang]}</button>
-              ))}
-            </div>
-          </fieldset>
-        </div>
-      </div>
-      <button className="btn cta wide" disabled={!ready} onClick={onNext}>{ready ? `${t('continue')} →` : t('pickDistrictFirst')}</button>
-    </section>
+    <div className="stack">
+      <h2>{t('appTagline')}</h2>
+      <p className="muted">{t('heroLede')}</p>
+      <button className="btn primary big" onClick={onStart}>{t('getStarted')} <ChevronRight size={18} /></button>
+      <button className="btn" onClick={onLogin}>{t('haveAccount')}</button>
+      <DemoAccounts />
+    </div>
   )
 }
 
-function familyName(profile, t, lang) {
-  const g = profile.learner_gender
-  const learner = g === 'f' ? t('daughter') : g === 'm' ? t('son') : t('learner')
-  const names = profile.members.map((m) => (m === 'learner' ? learner : t(m)))
-  return names.join(lang === 'hi' ? ' और ' : ' and ')
-}
-
-function Begin({ profile, onNext }) {
-  const t = useT()
-  const { lang } = useLang()
-  useEffect(() => {
-    const id = setTimeout(onNext, 2200)
-    return () => clearTimeout(id)
-  }, [])
+function StepHead({ step, total, title, sub }) {
+  const t = useT(S)
   return (
-    <section className="stage begin" onClick={onNext}>
-      <h1 className="rise">{t('journeyBegins')}</h1>
-      <div className="welcome rise" style={{ '--d': '0.4s' }}>{t('welcome')}, <strong>{familyName(profile, t, lang)}</strong></div>
-    </section>
+    <div>
+      <div className="step-count">{t('stepOf', { n: step, m: total - 1 })}</div>
+      <h2>{title}</h2>
+      {sub && <p className="muted">{sub}</p>}
+    </div>
   )
 }
 
-export function scoreAnswers(questions, answers) {
-  const trades = {}
-  const worries = {}
-  let keen = null
-  questions.forEach((q, i) => {
-    const a = answers[i]
-    if (a === undefined || a === null) return
-    const opt = q.options[a]
-    Object.entries(opt.trades || {}).forEach(([k, v]) => { trades[k] = (trades[k] || 0) + v })
-    if (opt.concern) worries[opt.concern] = (worries[opt.concern] || 0) + (q.id === 'worry' ? 2 : 1)
-    if (q.id === 'sure') keen = opt.keen
-  })
-  const total = Object.values(trades).reduce((a, b) => a + b, 0) || 1
-  const matches = Object.entries(trades).sort((a, b) => b[1] - a[1]).slice(0, 3)
-    .map(([id, s]) => ({ trade_id: id, score: Math.round((100 * s) / total) }))
-  return { matches, worries: Object.entries(worries).sort((a, b) => b[1] - a[1]).map(([c]) => c), keen }
+function RolePick({ role, setRole, step, total, onNext, onBack }) {
+  const t = useT(S)
+  return (
+    <div className="stack">
+      <StepHead step={step} total={total} title={t('whoAreYou')} sub={t('whoSub')} />
+      <div className="role-list" role="radiogroup">
+        {ROLES.map(([r, I]) => (
+          <button key={r} className={`role-card ${role === r ? 'on' : ''}`} onClick={() => setRole(r)} role="radio" aria-checked={role === r}>
+            <span className="role-ico"><I size={20} strokeWidth={1.75} /></span>
+            <span><strong>{t(`role_${r}`)}</strong><span className="small muted">{t(`r_${r}`)}</span></span>
+            {role === r ? <Check size={18} color="var(--teal)" /> : <span />}
+          </button>
+        ))}
+      </div>
+      <div className="row between"><button className="btn ghost" onClick={onBack}>{t('back')}</button><button className="btn primary" onClick={onNext}>{t('continue')}</button></div>
+    </div>
+  )
 }
 
-function Quiz({ meta, questions, profile, answers, setAnswers, onBack, onDone }) {
-  const t = useT()
-  const { lang } = useLang()
-  const [i, setI] = useState(Math.min(answers.length, questions.length - 1))
-  const [chosen, setChosen] = useState(null)
-  const [readAloud, setReadAloud] = useState(storage.get('saath.quizspeak') === '1')
-  const q = questions[i]
-  const live = scoreAnswers(questions, answers)
+function LanguagePick({ step, total, onNext, onBack }) {
+  const t = useT(S)
+  const { lang, setLang } = useLang()
+  return (
+    <div className="stack">
+      <StepHead step={step} total={total} title={t('langTitle')} sub={t('langSub')} />
+      <div className="lang-cards">
+        <button className={`lang-card ${lang === 'hi' ? 'on' : ''}`} onClick={() => setLang('hi')}><strong>हिंदी</strong><span className="small muted">Hindi</span></button>
+        <button className={`lang-card ${lang === 'en' ? 'on' : ''}`} onClick={() => setLang('en')}><strong>English</strong><span className="small muted">अंग्रेज़ी</span></button>
+        {OTHER_LANGS.map((l) => <button key={l} className="lang-card soon" disabled><strong>{l}</strong><span className="small muted">{t('soon')}</span></button>)}
+      </div>
+      <div className="row between"><button className="btn ghost" onClick={onBack}>{t('back')}</button><button className="btn primary" onClick={onNext}>{t('continue')}</button></div>
+    </div>
+  )
+}
 
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }) }, [i])
-  useEffect(() => {
-    if (readAloud) speak(`${q[lang]} ${q.options.map((o, n) => `${n + 1}. ${o[lang]}`).join('. ')}`, lang)
-  }, [i, lang, readAloud])
-
-  const choose = (n) => {
-    if (chosen !== null) return
-    setChosen(n)
-    const next = [...answers]
-    next[i] = n
-    setTimeout(() => {
-      setAnswers(next)
-      setChosen(null)
-      if (i + 1 < questions.length) setI(i + 1)
-      else onDone()
-    }, 320)
+function DemoAccounts({ roles = ['student', 'parent'] }) {
+  const t = useT(S)
+  const { signIn } = useSession()
+  const [busy, setBusy] = useState('')
+  const open = async (r) => {
+    setBusy(r)
+    try { signIn(await api.demoLogin(r)) } finally { setBusy('') }
   }
-  useEffect(() => {
-    const onKey = (e) => {
-      const n = Number(e.key)
-      if (n >= 1 && n <= q.options.length) choose(n - 1)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  })
-  const back = () => (i === 0 ? onBack() : setI(i - 1))
-  const toggleRead = () => {
-    storage.set('saath.quizspeak', readAloud ? '0' : '1')
-    if (readAloud) stopSpeaking()
-    setReadAloud(!readAloud)
-  }
-
+  const label = { student: t('demoRiya'), parent: t('demoSunita') }
   return (
-    <section className="stage quiz">
-      <div className="quiz-card" key={i}>
-        <div className="quiz-top">
-          <button className="round-btn" onClick={back} aria-label={t('back')}>‹</button>
-          <span className="pill">{i + 1} / {questions.length}</span>
-          <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={questions.length} aria-valuenow={i + 1}>
-            <span style={{ width: `${((i + 1) / questions.length) * 100}%` }} />
-          </div>
-          <button className={`round-btn ${readAloud ? 'on' : ''}`} onClick={toggleRead} title={t('readQuestions')} aria-pressed={readAloud}>🔊</button>
-        </div>
-        <div className={`who-chip who-${q.who}`}>{WHO[q.who].icon} {WHO[q.who][lang]}</div>
-        <div className="q-icon" aria-hidden>{q.icon}</div>
-        <h2 className="q-text">{q[lang]}</h2>
-        <div className="q-options">
-          {q.options.map((o, n) => (
-            <button key={n} className={`q-opt ${chosen === n ? 'picked' : ''} ${answers[i] === n && chosen === null ? 'prev' : ''}`}
-              onClick={() => choose(n)} style={{ '--d': `${0.05 + n * 0.06}s` }}>
-              <span className="q-opt-icon">{o.icon}</span>
-              <span className="q-opt-text">{o[lang]}</span>
-              <kbd>{n + 1}</kbd>
-            </button>
-          ))}
-        </div>
-        <button className="link skip" onClick={onDone}>{t('skipQuiz')}</button>
+    <div className="stack-1 mt">
+      <div className="section-title">{t('orDemo')}</div>
+      <div className="quick-login">
+        {roles.map((r) => (
+          <button key={r} className="btn small" disabled={!!busy} onClick={() => open(r)}>
+            {label[r] || t('openDemo', { role: t(`role_${r}`).toLowerCase() })}
+          </button>
+        ))}
       </div>
-
-      <aside className="live-panel" aria-live="polite">
-        <div className="live-title">{t('familyPicture')}</div>
-        <div className="live-family">
-          {profile.members.map((m) => <span key={m} className="avatar" title={t(m)}>{MEMBER_ICON[m]}</span>)}
-          <span className="muted">{pick(meta.districts.find((d) => d.id === profile.district_id), lang)}</span>
-        </div>
-        <div className="live-sec">{t('matchingWork')}</div>
-        {live.matches.length === 0 && <div className="muted small">{t('answerToSee')}</div>}
-        {live.matches.map((m) => {
-          const tr = meta.trades.find((x) => x.id === m.trade_id)
-          return (
-            <div key={m.trade_id} className="match">
-              <div className="match-row"><span>{tr.icon} {pick(tr, lang)}</span><strong>{m.score}%</strong></div>
-              <div className="bar"><span style={{ width: `${m.score}%` }} /></div>
-            </div>
-          )
-        })}
-        <div className="live-sec">{t('worriesHeard')}</div>
-        <div className="chips">
-          {live.worries.length === 0 && <span className="muted small">—</span>}
-          {live.worries.map((c) => <span key={c} className="worry pop">{meta.concerns[c].icon} {meta.concerns[c][lang]}</span>)}
-        </div>
-      </aside>
-    </section>
+    </div>
   )
 }
 
-function Result({ meta, questions, answers, onBack, onStart }) {
-  const t = useT()
+function Login({ role, onBack, onNew }) {
+  const t = useT(S)
   const { lang } = useLang()
-  const r = scoreAnswers(questions, answers)
-  const [trade, setTrade] = useState(r.matches[0]?.trade_id || '')
-  const [all, setAll] = useState(r.matches.length === 0)
-  const [busy, setBusy] = useState(false)
+  const { signIn } = useSession()
+  const [mobile, setMobile] = useState('')
+  const [name, setName] = useState('')
+  const [demo, setDemo] = useState('')
+  const [code, setCode] = useState('')
   const [err, setErr] = useState('')
-  const options = all ? meta.trades.map((x) => ({ trade_id: x.id, score: r.matches.find((m) => m.trade_id === x.id)?.score })) : r.matches
-  const keenLabel = r.keen === null ? null : r.keen >= 0.5 ? 'keenVery' : r.keen >= 0 ? 'keenOpen' : r.keen >= -0.5 ? 'keenDoubt' : 'keenAgainst'
+  const [busy, setBusy] = useState(false)
+  const staff = ['counsellor', 'teacher', 'admin'].includes(role)
 
-  const go = async () => {
-    setBusy(true)
+  const send = async (e) => {
+    e.preventDefault()
     setErr('')
-    try { await onStart(trade || null) } catch (e) { setErr(e.message); setBusy(false) }
+    setBusy(true)
+    try { setDemo((await api.otpRequest(mobile)).demo_code) } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  const verify = async (e) => {
+    e.preventDefault()
+    setErr('')
+    setBusy(true)
+    try {
+      const res = await api.otpVerify({ mobile, code, role, lang, name })
+      signIn(res)
+      if (res.is_new || !res.onboarded) onNew()
+    } catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
 
-  return (
-    <section className="stage result">
-      <TopNav onBack={onBack} />
-      <h1 className="rise">{t('resultTitle')}</h1>
-      <div className="muted center rise">{t('resultSub')}</div>
-      <div className="result-grid rise" style={{ '--d': '0.15s' }}>
-        {options.map((m, n) => {
-          const tr = meta.trades.find((x) => x.id === m.trade_id)
-          return (
-            <button key={m.trade_id} className={`result-tile ${trade === m.trade_id ? 'on' : ''}`} onClick={() => setTrade(m.trade_id)} aria-pressed={trade === m.trade_id}>
-              {n === 0 && !all && <span className="best">{t('bestMatch')}</span>}
-              <span className="trade-icon">{tr.icon}</span>
-              <span className="result-name">{pick(tr, lang)}</span>
-              <small>{pick(tr, lang, 'sector')} · NSQF {tr.nsqf_level} · {tr.duration_months} {t('months')}</small>
-              {m.score !== undefined && <span className="result-score">{m.score}% {t('match')}</span>}
-            </button>
-          )
-        })}
+  if (staff) {
+    return (
+      <div className="stack">
+        <h2>{t('loginTitle')}</h2>
+        <div className="note"><Info size={16} /><span>{t('staffNote')}</span></div>
+        <DemoAccounts roles={[role]} />
+        <button className="btn ghost" onClick={onBack}>{t('back')}</button>
       </div>
-      {!all && <button className="link center-block" onClick={() => setAll(true)}>{t('seeAllWork')}</button>}
-      {r.worries.length > 0 && (
-        <div className="result-worries rise" style={{ '--d': '0.3s' }}>
-          <div className="live-sec">{t('weWillTalk')}</div>
-          <div className="chips center">{r.worries.map((c) => <span key={c} className="worry">{meta.concerns[c].icon} {meta.concerns[c][lang]}</span>)}</div>
+    )
+  }
+  return (
+    <div className="stack">
+      <div><h2>{t('loginTitle')}</h2><p className="muted">{t('loginSub')}</p></div>
+      {!demo ? (
+        <form className="stack" onSubmit={send}>
+          <label className="field"><span>{t('mobile')}</span>
+            <input className="input" inputMode="numeric" autoComplete="tel-national" placeholder="98765 43210" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+          </label>
+          <label className="field"><span>{t('yourName')}</span>
+            <input className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
+          </label>
+          <button className="btn primary" disabled={busy || mobile.replace(/\D/g, '').length < 10}>{t('sendCode')}</button>
+        </form>
+      ) : (
+        <form className="stack" onSubmit={verify}>
+          <div className="demo-otp">{t('demoCode')} <strong>{demo}</strong></div>
+          <label className="field"><span>{t('code')}</span>
+            <input className="input otp" inputMode="numeric" maxLength={6} autoFocus value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
+          </label>
+          <button className="btn primary" disabled={busy || code.length !== 6}>{t('verify')}</button>
+        </form>
+      )}
+      {err && <div className="alert">{err}</div>}
+      <DemoAccounts />
+      <button className="btn ghost" onClick={onBack}>{t('back')}</button>
+    </div>
+  )
+}
+
+function DistrictSelect({ value, onChange }) {
+  const t = useT(S)
+  const { lang, meta } = useLang()
+  const states = [...new Set(meta.districts.map((d) => d.state))]
+  return (
+    <select className="select" value={value || ''} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{t('chooseDistrict')}</option>
+      {states.map((s) => (
+        <optgroup key={s} label={lang === 'hi' ? meta.districts.find((d) => d.state === s).state_hi : s}>
+          {meta.districts.filter((d) => d.state === s).map((d) => <option key={d.id} value={d.id}>{pick(d, lang)}</option>)}
+        </optgroup>
+      ))}
+    </select>
+  )
+}
+
+function Chips({ options, value, onChange }) {
+  return (
+    <div className="chips" role="radiogroup">
+      {options.map(([v, label]) => (
+        <button key={v} type="button" role="radio" aria-checked={value === v} className={`chip ${value === v ? 'on' : ''}`} onClick={() => onChange(v)}>{label}</button>
+      ))}
+    </div>
+  )
+}
+
+function Details({ role, onNext }) {
+  const t = useT(S)
+  const { lang, meta } = useLang()
+  const { me, setMe } = useSession()
+  const p = me?.profile || {}
+  const [f, setF] = useState({
+    name: me?.user?.name || '', district_id: p.district_id || me?.user?.district_id || '', education_level: p.education_level || '10',
+    study_mode: p.study_mode || 'full_time', age: p.age || 16, gender: p.gender || 'x', relation: me?.user?.relation || 'mother',
+  })
+  const [busy, setBusy] = useState(false)
+  const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }))
+  const save = async () => {
+    setBusy(true)
+    const body = role === 'student'
+      ? { name: f.name, district_id: f.district_id, education_level: f.education_level, study_mode: f.study_mode, age: f.age, gender: f.gender }
+      : { name: f.name, district_id: f.district_id, relation: f.relation }
+    try { setMe(await api.patchMe(body)); onNext() } finally { setBusy(false) }
+  }
+  return (
+    <div className="stack">
+      <div><h2>{t('aboutYou')}</h2><p className="muted">{t('aboutSub')}</p></div>
+      <label className="field"><span>{t('yourName')}</span><input className="input" value={f.name} onChange={(e) => set('name')(e.target.value)} maxLength={60} /></label>
+      {role === 'parent' && (
+        <div className="field"><span>{t('iAm')}</span>
+          <Chips value={f.relation} onChange={set('relation')} options={[['mother', t('mother')], ['father', t('father')], ['guardian', t('guardian')]]} />
         </div>
       )}
-      {keenLabel && <div className="keen rise" style={{ '--d': '0.4s' }}>{t('familyFeels')}: <strong>{t(keenLabel)}</strong></div>}
-      {err && <div className="alert">{err}</div>}
-      <button className="btn cta wide" disabled={busy || !trade} onClick={go}>💬 {t('startTalking')}</button>
-    </section>
+      <label className="field"><span>{t('district')}</span><DistrictSelect value={f.district_id} onChange={set('district_id')} /></label>
+      {role === 'student' && (
+        <>
+          <div className="field"><span>{t('education')}</span>
+            <Chips value={f.education_level} onChange={set('education_level')} options={meta.education.map((e) => [e.id, e[lang]])} />
+          </div>
+          <div className="field"><span>{t('studyMode')}</span>
+            <Chips value={f.study_mode} onChange={set('study_mode')} options={meta.study_modes.map((e) => [e.id, e[lang]])} />
+          </div>
+          <div className="field">
+            <div className="range-row"><span className="label">{t('age')}</span><span className="val">{f.age} {t('years')}</span>
+              <input type="range" min="14" max="30" value={f.age} onChange={(e) => set('age')(Number(e.target.value))} aria-label={t('age')} />
+            </div>
+          </div>
+          <div className="field"><span>{t('gender')}</span>
+            <Chips value={f.gender} onChange={set('gender')} options={[['f', t('girl')], ['m', t('boy')], ['x', t('noSay')]]} />
+          </div>
+        </>
+      )}
+      <button className="btn primary" disabled={busy || !f.district_id} onClick={save}>{t('continue')}</button>
+    </div>
   )
 }
 
-function TopNav({ onBack }) {
-  const t = useT()
+function Toggle({ checked, onChange, title, sub }) {
   return (
-    <div className="stage-nav">
-      <button className="link-btn" onClick={onBack}>← {t('back')}</button>
+    <label className="toggle">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span className="track" aria-hidden />
+      <span><strong className="strong" style={{ color: 'var(--navy)' }}>{title}</strong><br /><span className="small muted">{sub}</span></span>
+    </label>
+  )
+}
+
+export function ConsentToggles({ value, onChange }) {
+  const t = useT(S)
+  const set = (k) => (v) => onChange({ ...value, [k]: v })
+  return (
+    <div>
+      <Toggle checked={value.ai_guidance} onChange={set('ai_guidance')} title={t('c_ai')} sub={t('c_ai_s')} />
+      <Toggle checked={value.counsellor_share} onChange={set('counsellor_share')} title={t('c_counsellor')} sub={t('c_counsellor_s')} />
+      <Toggle checked={value.parent_link} onChange={set('parent_link')} title={t('c_parent')} sub={t('c_parent_s')} />
+      <Toggle checked={value.research} onChange={set('research')} title={t('c_research')} sub={t('c_research_s')} />
+    </div>
+  )
+}
+
+function Consent({ onNext }) {
+  const t = useT(S)
+  const { me, setMe } = useSession()
+  const [c, setC] = useState({ ai_guidance: true, counsellor_share: false, parent_link: true, research: false })
+  const [busy, setBusy] = useState(false)
+  const save = async () => {
+    setBusy(true)
+    try {
+      setMe(await api.setConsents(c))
+      onNext(me.user.role)
+    } finally { setBusy(false) }
+  }
+  return (
+    <div className="stack">
+      <div><h2>{t('consentTitle')}</h2><p className="muted">{t('consentSub')}</p></div>
+      <ConsentToggles value={c} onChange={setC} />
+      {me?.user?.role === 'student' && (me.profile?.age || 18) < 18 && <div className="note saffron"><ShieldCheck size={16} /><span>{t('minorNote')}</span></div>}
+      <button className="btn primary" disabled={busy} onClick={save}>{t('continue')}</button>
+    </div>
+  )
+}
+
+function DnaStep() {
+  const t = useT(S)
+  const { lang, meta } = useLang()
+  const { setMe } = useSession()
+  const navigate = useNavigate()
+  const [answers, setAnswers] = useState({})
+  const [conf, setConf] = useState({ numerical: 3, spatial: 3, digital: 3 })
+  const [busy, setBusy] = useState(false)
+  const items = meta.riasec_items
+  const count = Object.keys(answers).length
+
+  // same normalisation as the server, so the hexagon is exactly what will be saved
+  const live = useMemo(() => {
+    const w = { like: 2, meh: 1, no: 0 }
+    const tot = Object.fromEntries(meta.riasec.map((d) => [d, 0]))
+    items.forEach((i) => { if (answers[i.id]) tot[i.dim] += w[answers[i.id]] })
+    const s = Object.values(tot).reduce((a, b) => a + b, 0)
+    return s ? Object.fromEntries(Object.entries(tot).map(([k, v]) => [k, v / s])) : null
+  }, [answers])
+
+  const submit = async () => {
+    setBusy(true)
+    try {
+      await api.saveDna({ answers, confidence: conf })
+      storage.set('udaan.tour', '1')
+      setMe((m) => ({ ...m, has_dna: true }))
+      navigate('/student')
+    } finally { setBusy(false) }
+  }
+  return (
+    <div className="stack">
+      <div><h2>{t('dnaTitle')}</h2><p className="muted">{t('dnaSub')}</p></div>
+      <div className="row between"><span className="small strong">{t('answered', { n: count, m: items.length })}</span></div>
+      <div className="meter"><span style={{ width: `${(100 * count) / items.length}%` }} /></div>
+      <div className="dna-layout">
+      <div className="stack-1">
+        {items.map((it) => (
+          <div key={it.id} className="activity">
+            <span className="activity-ico"><Icon name={it.icon} size={22} /></span>
+            <span className="activity-text">{tr(it, lang)}</span>
+            <div className="vote" role="radiogroup" aria-label={tr(it, lang)}>
+              {['like', 'meh', 'no'].map((v) => (
+                <button key={v} role="radio" aria-checked={answers[it.id] === v} className={`${v} ${answers[it.id] === v ? 'on' : ''}`}
+                  onClick={() => setAnswers((a) => ({ ...a, [it.id]: v }))}>{t(v)}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <aside className="panel tight dna-live">
+        <div className="section-title">{t('yourShape')}</div>
+        <Hexagon riasec={live} labels={meta.riasec_labels} lang={lang} size={260} />
+        <div className="tiny muted">{t('shapeHint')}</div>
+      </aside>
+      </div>
+      <div className="panel tight stack">
+        <div className="section-title">{t('confidence')}</div>
+        {['numerical', 'spatial', 'digital'].map((k) => (
+          <div key={k} className="range-row">
+            <span className="label">{t(`c_${k}`)}</span>
+            <span className="val">{conf[k] <= 2 ? t('low') : conf[k] >= 4 ? t('high') : conf[k]}</span>
+            <input type="range" min="1" max="5" value={conf[k]} onChange={(e) => setConf({ ...conf, [k]: Number(e.target.value) })} aria-label={t(`c_${k}`)} />
+          </div>
+        ))}
+      </div>
+      <button className="btn primary big" disabled={busy || count < 12} onClick={submit}>{count < 12 ? t('needMore') : t('seeResults')}</button>
     </div>
   )
 }

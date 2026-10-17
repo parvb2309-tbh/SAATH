@@ -1,17 +1,27 @@
-"""Scheme administrator API: resistance dashboard, families and parent updates, outcome data import."""
+"""Government administrator API: resistance dashboard, GIS gap map, barrier taxonomy, SIDH tracker,
+policy metrics, attribution heatmap, families and parent updates, outcome data import."""
 import csv
+import hashlib
 import io
+import random
+import statistics
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from .. import db
+from .. import auth, db
+from ..catalog import BARRIERS, RIASEC, TRADE_PROFILES
+from ..engine import match
 from ..engine.concerns import OBJECTIONS
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require("admin"))])
+
+MIN_COHORT = 50      # spec 7.2: no aggregate is shown for a cohort with fewer than 50 people
+EPSILON = 1.0        # Laplace noise scale 1/epsilon on every published count
+GAP_EPS = 1.0        # epsilon in IGI_d = D / (S + epsilon)
 
 INTERESTED = {"interested", "enrolled", "retained"}
 ENROLLED = {"enrolled", "retained"}
@@ -209,4 +219,165 @@ async def import_outcomes(request: Request, replace: bool = False):
             for rec in good:
                 c.execute("DELETE FROM outcomes WHERE trade_id = ? AND district_id = ?", (rec["trade_id"], rec["district_id"]))
     db.insert_many("outcomes", good)
+    match.clear_caches()
     return {"loaded": len(good), "errors": errors}
+
+
+# ------------------------------------------------------------------ UDAAN analytics
+def _noisy(count: int, key: str) -> int:
+    """Laplace mechanism with a seed per cell, so a refresh shows the same noisy value."""
+    rng = random.Random(int(hashlib.sha256(key.encode()).hexdigest()[:12], 16))
+    return max(0, round(count + rng.expovariate(EPSILON) - rng.expovariate(EPSILON)))
+
+
+def _profiles() -> list[dict]:
+    return db.query("SELECT * FROM student_profiles")
+
+
+@router.get("/gis")
+def gis(trade: str = "all"):
+    if trade != "all" and trade not in TRADE_PROFILES:
+        raise HTTPException(400, "Unknown trade")
+    centres = db.query("SELECT * FROM centres")
+    by_d = defaultdict(list)
+    for p in _profiles():
+        by_d[p["district_id"]].append(p)
+    rows = []
+    for d in db.query("SELECT * FROM districts"):
+        ps = by_d[d["id"]]
+        offered = [c for c in centres if c["district_id"] == d["id"] and (trade == "all" or trade in c["trades"])]
+        seats = sum(c["capacity"] for c in offered)
+        suppressed = len(ps) < MIN_COHORT
+        demand = None
+        if not suppressed:
+            raw = sum(1 for p in ps if p.get("chosen_trade") and (trade == "all" or p["chosen_trade"] == trade))
+            demand = _noisy(raw, f"gis:{d['id']}:{trade}")
+        rows.append({
+            "id": d["id"], "name_en": d["name_en"], "name_hi": d["name_hi"], "state": d["state"], "lat": d["lat"],
+            "lng": d["lng"], "students": None if suppressed else len(ps), "suppressed": suppressed,
+            "demand": demand, "seats": seats, "centres": len(offered),
+            "igi": None if suppressed else round(demand / (seats + GAP_EPS), 3),
+        })
+    rows.sort(key=lambda r: -(r["igi"] if r["igi"] is not None else -1))
+    return {"trade": trade, "min_cohort": MIN_COHORT, "epsilon": EPSILON, "districts": rows}
+
+
+@router.get("/barriers")
+def barriers(split: str = "all"):
+    to_cat = {c: k for k, v in BARRIERS.items() for c in v["concerns"]}
+    per_session = defaultdict(Counter)
+    for m in db.query("SELECT session_id, concerns FROM messages WHERE role = 'user'"):
+        for c in m["concerns"] or []:
+            if c in to_cat:
+                per_session[m["session_id"]][to_cat[c]] += 1
+    cohorts = defaultdict(list)
+    for s in db.query("SELECT id, district_id, learner_gender FROM sessions"):
+        cohort = "all" if split == "all" else {"f": "girls", "m": "boys"}.get(s["learner_gender"], "unspecified")
+        if cohort != "unspecified":
+            cohorts[(s["district_id"], cohort)].append(s["id"])
+    districts = {d["id"]: d for d in db.query("SELECT * FROM districts")}
+    rows, totals = [], Counter()
+    for (did, cohort), sids in sorted(cohorts.items(), key=lambda kv: (districts[kv[0][0]]["state"], kv[0][0], kv[0][1])):
+        n = len(sids)
+        row = {"district_id": did, "name_en": districts[did]["name_en"], "name_hi": districts[did]["name_hi"],
+               "state": districts[did]["state"], "cohort": cohort, "n": n if n >= MIN_COHORT else None,
+               "suppressed": n < MIN_COHORT}
+        if n >= MIN_COHORT:
+            raw = Counter()
+            for sid in sids:
+                raw.update(per_session[sid])
+            noisy = {k: _noisy(raw.get(k, 0), f"bar:{did}:{cohort}:{k}") for k in BARRIERS}
+            total = sum(noisy.values()) or 1
+            row.update(counts=noisy, shares={k: round(100 * v / total) for k, v in noisy.items()},
+                       top=max(noisy, key=noisy.get))
+            totals.update(noisy)
+        rows.append(row)
+    return {"split": split, "min_cohort": MIN_COHORT, "epsilon": EPSILON,
+            "categories": {k: {"en": v["en"], "hi": v["hi"], "concerns": v["concerns"]} for k, v in BARRIERS.items()},
+            "rows": rows, "totals": dict(totals)}
+
+
+@router.get("/sidh")
+def sidh():
+    profiles = _profiles()
+    stages = Counter(min(max(p.get("stage") or 1, 1), 8) for p in profiles)
+    districts = {d["id"]: d for d in db.query("SELECT * FROM districts")}
+    by_d = defaultdict(lambda: {"students": 0, "enrolled": 0})
+    for p in profiles:
+        by_d[p["district_id"]]["students"] += 1
+        by_d[p["district_id"]]["enrolled"] += (p.get("stage") or 1) >= 6
+    recent = [{"ref": (p.get("flags") or {}).get("sidh_ref"), "trade": (p.get("flags") or {}).get("sidh_trade"),
+               "district_en": districts[p["district_id"]]["name_en"], "created_at": p["created_at"]}
+              for p in profiles if (p.get("flags") or {}).get("sidh_ref")]
+    return {
+        "funnel": [{"stage": i, "reached": sum(c for s, c in stages.items() if s >= i)} for i in range(1, 9)],
+        "districts": [{"id": k, "name_en": districts[k]["name_en"], "state": districts[k]["state"], **v,
+                       "rate": round(100 * v["enrolled"] / v["students"]) if v["students"] else 0}
+                      for k, v in sorted(by_d.items(), key=lambda kv: -kv[1]["enrolled"]) if k in districts],
+        "recent": sorted(recent, key=lambda r: r["created_at"] or "", reverse=True)[:10],
+    }
+
+
+@router.get("/metrics")
+def metrics():
+    attempts = db.query("SELECT completed_at FROM simulation_attempts")
+    profiles = _profiles()
+    links = db.query("SELECT * FROM guardian_links WHERE consent_status = 'linked'")
+    viewed = {e["user_id"] for e in db.query(
+        "SELECT DISTINCT user_id FROM events WHERE kind = 'report_viewed' AND user_id IS NOT NULL")}
+    cons = db.query("SELECT completed FROM consensus")
+    l2 = db.query("SELECT created_at, first_contact_at FROM escalations WHERE risk_level >= 2 AND first_contact_at IS NOT NULL")
+    hours = [(datetime.fromisoformat(e["first_contact_at"]) - datetime.fromisoformat(e["created_at"])).total_seconds() / 3600
+             for e in l2]
+    covered = {s["district_id"] for s in db.query(
+        "SELECT DISTINCT s.district_id FROM sessions s JOIN messages m ON m.session_id = s.id WHERE m.role = 'user'")}
+    n_districts = db.count("districts")
+
+    def pct(a, b):
+        return round(100 * a / b) if b else None
+
+    return {"metrics": [
+        {"id": "sim_completion", "value": pct(sum(1 for a in attempts if a["completed_at"]), len(attempts)),
+         "unit": "%", "target": 75, "op": ">=", "n": len(attempts)},
+        {"id": "pathway_depth", "value": pct(sum(1 for p in profiles if (p.get("stage") or 1) >= 4), len(profiles)),
+         "unit": "%", "target": 60, "op": ">=", "n": len(profiles)},
+        {"id": "report_use", "value": pct(sum(1 for lk in links if lk["parent_id"] in viewed), len(links)),
+         "unit": "%", "target": 80, "op": ">=", "n": len(links)},
+        {"id": "consensus", "value": pct(sum(1 for c in cons if c["completed"]), len(cons)),
+         "unit": "%", "target": 50, "op": ">=", "n": len(cons)},
+        {"id": "referral_sla", "value": round(statistics.median(hours), 1) if hours else None,
+         "unit": "h", "target": 24, "op": "<", "n": len(hours), "within": pct(sum(1 for h in hours if h < 24), len(hours))},
+        {"id": "coverage", "value": pct(len(covered), n_districts), "unit": "%", "target": 100, "op": ">=", "n": n_districts},
+    ]}
+
+
+@router.get("/attribution")
+def attribution_heatmap():
+    """Average SHAP-style contribution of each feature to each student's top recommendation, by district."""
+    rows = db.query("SELECT p.*, d.riasec, d.competencies, d.confidence FROM student_profiles p "
+                    "JOIN career_dna d ON d.profile_id = p.id WHERE d.riasec IS NOT NULL")
+    by_d = defaultdict(list)
+    for r in rows:
+        by_d[r["district_id"]].append(r)
+    features = [*RIASEC, "skill", *match.LAMBDA]
+    districts = {d["id"]: d for d in db.query("SELECT * FROM districts")}
+    out = []
+    for did, ps in by_d.items():
+        n = len(ps)
+        row = {"id": did, "name_en": districts[did]["name_en"], "name_hi": districts[did]["name_hi"],
+               "state": districts[did]["state"], "n": n if n >= MIN_COHORT else None, "suppressed": n < MIN_COHORT,
+               "values": None, "top_trade": None}
+        if n >= MIN_COHORT:
+            acc, tops = defaultdict(float), Counter()
+            for p in ps:
+                best = match.rank(p, {"riasec": p["riasec"], "competencies": p["competencies"],
+                                      "confidence": p["confidence"]})[0]
+                tops[best["trade_id"]] += 1
+                for t in match.attribution(best):
+                    acc["skill" if t["group"] == "skill" else t["key"]] += t["shap"]
+            row["values"] = {f: round(acc[f] / n, 4) for f in features}
+            row["top_trade"] = tops.most_common(1)[0][0]
+        out.append(row)
+    out.sort(key=lambda r: (r["state"], r["name_en"]))
+    return {"features": features, "rows": out, "min_cohort": MIN_COHORT}
+

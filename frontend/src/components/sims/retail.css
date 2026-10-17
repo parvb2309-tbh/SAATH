@@ -1,0 +1,87 @@
+.sim-retail { display: grid; gap: var(--s2); min-width: 0; }
+
+.sim-retail-status { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s2); }
+.sim-retail-time, .sim-retail-mood { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.sim-retail-timebar { height: 8px; background: var(--tint); border-radius: 1px; overflow: hidden; }
+.sim-retail-timebar > span { display: block; height: 100%; background: var(--teal); transition: width 0.2s linear; }
+.sim-retail-timebar.warn > span { background: var(--saffron); }
+.sim-retail-timebar.err > span { background: var(--error); }
+
+.sim-retail-moodtrack { position: relative; height: 12px; background: var(--tint); border-radius: 1px; overflow: hidden; }
+.sim-retail-moodtrack > span { position: absolute; top: 0; bottom: 0; transition: width 0.3s ease; }
+.sim-retail-moodtrack > span.neg { background: var(--error); }
+.sim-retail-moodtrack > span.pos { background: var(--success); }
+.sim-retail-moodtrack > i { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--text-2); }
+.sim-retail-neg { color: var(--error); }
+.sim-retail-pos { color: var(--success); }
+
+.sim-retail-steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; }
+.sim-retail-steps span { height: 4px; background: var(--tint); }
+.sim-retail-steps span.done { background: var(--teal-bright); }
+.sim-retail-steps span.current { background: var(--saffron); }
+.sim-retail-instr { margin: 0; color: var(--navy); }
+
+.sim-retail-transcript {
+  display: grid; gap: var(--s1); align-content: start; max-height: 300px; overflow-y: auto;
+  padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);
+}
+.sim-retail-line { max-width: 88%; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); }
+.sim-retail-line p { margin: 0; }
+.sim-retail-line.cust { justify-self: start; border-left: 3px solid var(--saffron); }
+.sim-retail-line.me { justify-self: end; background: var(--teal-tint); border-color: #b5dcdf; }
+.sim-retail-who { display: block; font-size: 12px; font-weight: 650; color: var(--text-2); margin-bottom: 2px; }
+
+.sim-retail-options { display: grid; gap: var(--s1); }
+.sim-retail-opt {
+  width: 100%; min-height: 48px; padding: 10px 14px; text-align: left; line-height: 1.4;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--navy); cursor: pointer;
+}
+.sim-retail-opt:hover { border-color: var(--navy); }
+
+.sim-retail-pos { border: 1px solid var(--navy); border-radius: var(--radius); background: var(--surface); min-width: 0; }
+.sim-retail-poshead {
+  display: flex; justify-content: space-between; align-items: center; gap: var(--s1); flex-wrap: wrap;
+  padding: 8px 12px; background: var(--navy); color: #fff;
+}
+.sim-retail-posbody { display: grid; gap: var(--s1); padding: 12px; min-width: 0; }
+.sim-retail-search { display: flex; gap: var(--s1); }
+.sim-retail-search .input { flex: 1; min-width: 0; }
+.sim-retail-search .btn { flex-shrink: 0; }
+.sim-retail-posbody .link { justify-self: start; }
+.sim-retail-orders { border: 1px solid var(--line); border-radius: var(--radius); }
+.sim-retail-orders .table td { padding: 8px; }
+.sim-retail-nowrap { white-space: nowrap; }
+.sim-retail-orderbtn { border: 0; background: none; padding: 0; color: var(--teal); font-weight: 650; cursor: pointer; white-space: nowrap; }
+
+.sim-retail-detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s2); }
+.sim-retail-bill { display: grid; gap: var(--s1); align-content: start; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
+.sim-retail-bill dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 14px; }
+.sim-retail-bill dt { color: var(--text-2); }
+.sim-retail-bill dd { margin: 0; color: var(--navy); font-weight: 600; }
+.sim-retail-bill .note { margin: 0; }
+
+.sim-retail-policy { padding: 12px; border: 1px solid var(--line); border-left: 4px solid var(--teal); border-radius: var(--radius); background: var(--surface); }
+.sim-retail-policy h4 { margin-bottom: 4px; }
+.sim-retail-policy ul { margin: 0; padding-left: 18px; font-size: 14px; }
+.sim-retail-policy li { margin: 4px 0; }
+
+.sim-retail-resolve { display: grid; gap: var(--s1); }
+.sim-retail-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s1); }
+.sim-retail-choice {
+  display: flex; align-items: center; gap: var(--s1); min-height: 52px; padding: 8px 12px; text-align: left;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--navy); font-weight: 600; cursor: pointer;
+}
+.sim-retail-choice:hover { border-color: var(--navy); }
+.sim-retail-choice svg { flex-shrink: 0; color: var(--teal); }
+
+@media (max-width: 720px) {
+  .sim-retail-status, .sim-retail-detail { grid-template-columns: 1fr; }
+  .sim-retail-line { max-width: 100%; }
+}
+@media (max-width: 400px) {
+  .sim-retail-choices { grid-template-columns: 1fr; }
+  .sim-retail-search .btn { padding: 0 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sim-retail-timebar > span, .sim-retail-moodtrack > span { transition: none; }
+}

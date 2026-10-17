@@ -1,4 +1,4 @@
-# Starts the SAATH backend (port 8000) and frontend (port 5173) in two new windows.
+# Starts the UDAAN backend (port 8000) and frontend (port 5173) in two new windows.
 # First run installs everything. Usage:  powershell -ExecutionPolicy Bypass -File .\start.ps1
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backend = Join-Path $root 'backend'

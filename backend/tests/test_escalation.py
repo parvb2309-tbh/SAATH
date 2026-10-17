@@ -1,12 +1,24 @@
-from app.engine.escalation import evaluate
+from app.engine.escalation import evaluate, level_for
 
 
 def u(concerns, s=-0.2):
     return {"role": "user", "concerns": concerns, "sentiment": s}
 
 
-def test_distress_is_most_urgent():
+def test_crisis_is_level_3():
+    assert evaluate([], ["crisis", "distress"], -0.9) == ("crisis", 1)
+    assert level_for("crisis") == 3
+
+
+def test_distress_is_level_2():
     assert evaluate([], ["distress"], -0.9) == ("distress", 1)
+    assert level_for("distress") == 2
+
+
+def test_decision_paralysis_is_level_1():
+    assert evaluate([], ["confused"], -0.1) == ("paralysis", 3)
+    assert evaluate([], ["income"], 0.0, trade_changes=3) == ("trade_switching", 3)
+    assert level_for("paralysis") == level_for("repeat:income") == 1
 
 
 def test_asking_for_a_person():
