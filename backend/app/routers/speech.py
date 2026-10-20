@@ -1,5 +1,6 @@
 """Speech endpoints: neural TTS (edge-tts) and an STT fallback (Gemini) for browsers without Web Speech."""
 from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from ..llm import gemini
@@ -23,6 +24,20 @@ async def speak(body: TTSIn):
     except Exception as e:  # noqa: BLE001 - network or service error: the browser falls back to its own voice
         raise HTTPException(503, f"TTS unavailable: {e}")
     return Response(content=audio, media_type=mime, headers={"Cache-Control": "max-age=86400"})
+
+
+@router.post("/tts-stream")
+async def speak_stream(body: TTSIn):
+    """Zero-latency streaming TTS endpoint that streams audio chunks back to Web Audio API."""
+    try:
+        return StreamingResponse(
+            tts.stream_synthesize(body.text, body.lang),
+            media_type="audio/mpeg",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+        )
+    except Exception as e:
+        raise HTTPException(503, f"Streaming TTS unavailable: {e}")
+
 
 
 @router.post("/stt")

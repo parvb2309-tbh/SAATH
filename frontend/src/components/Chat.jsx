@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { BookOpen, CalendarCheck, LifeBuoy, Phone, ShieldAlert, Volume2, VolumeX, X } from 'lucide-react'
+import { BookOpen, CalendarCheck, LifeBuoy, Loader2, Phone, ShieldAlert, Square, Volume2, VolumeX, X } from 'lucide-react'
 import { api, storage } from '../lib/api'
 import { useLang, useT } from '../lib/i18n'
-import { speak, stopSpeaking } from '../lib/speech'
+import { speak, stopSpeaking, subscribeAudioState } from '../lib/speech'
 import Cards from './Cards'
 import EngineBadge from './EngineBadge'
 import Icon from './Icon'
@@ -140,16 +140,21 @@ export default function Chat({ sessionId, speaker, pathwayHref, quick = true }) 
 function Message({ m, pathwayHref }) {
   const t = useT()
   const { lang } = useLang()
+  const [audio, setAudio] = useState({ state: 'idle', activeId: null })
+  useEffect(() => subscribeAudioState(setAudio), [])
   const bot = m.role === 'assistant'
   if (m.engine === 'quiz' || !m.text) return null
+  const loading = audio.activeId === m.id && audio.state === 'loading'
+  const playing = audio.activeId === m.id && audio.state === 'playing'
   return (
     <div className={`msg ${bot ? 'bot' : 'user'} ${m.pending ? 'pending' : ''}`}>
       <div className="who">{bot ? `${t('assistantName')}` : t(m.speaker)}</div>
       <div className="bubble">
         {m.text}
         {bot && (
-          <button className="icon-btn play" onClick={() => speak(m.text, m.lang || lang)} aria-label={t('readAloud')} title={t('readAloud')}>
-            <Volume2 size={14} />
+          <button className={`icon-btn play ${playing ? 'on' : ''}`} onClick={() => speak(m.text, m.lang || lang, m.id)} disabled={loading}
+            aria-label={playing ? 'Stop' : t('readAloud')} title={playing ? 'Stop' : t('readAloud')}>
+            {loading ? <Loader2 size={14} className="spin" /> : playing ? <Square size={12} fill="currentColor" /> : <Volume2 size={14} />}
           </button>
         )}
       </div>

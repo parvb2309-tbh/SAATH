@@ -72,7 +72,10 @@ The sign-in screen has one-tap demo accounts. No SMS is ever sent: the OTP is sh
     - **Barrier taxonomy**, by district or by girls/boys.
     - **SIDH tracker** and the **policy metrics matrix** (the six §8.2 metrics, pass/fail against target).
     - **Interest drivers** heatmap.
-    - The earlier family-resistance dashboard, parent updates and outcome CSV import.
+    - The earlier family-resistance dashboard (with session length, fact cards shown and escalation rate), parent
+      updates and outcome CSV import.
+    - **Model feedback loop**: flag chat turns for tone, safety or figure problems, then approve or dismiss them for
+      retraining.
 
     Cohorts under **N = 50** are hidden, and published counts carry Laplace noise (ε = 1).
 
@@ -117,7 +120,8 @@ Crisis and distress always get the reviewed reply, whatever the model says.
 - **OTP in demo mode.** The code is shown on screen. Mobile numbers are stored only as salted SHA-256 hashes.
 - **Stubbed government APIs.** SIDH registration and the NAPS routing are clearly marked demo stubs; the live APIs
   are Phase 2.
-- **Voice is free.** The browser's Web Speech API listens, with Gemini as the fallback, and `edge-tts` speaks.
+- **Voice is free.** The browser's Web Speech API listens, with Gemini as the fallback, and `edge-tts` speaks,
+  streamed from `/api/speech/tts-stream`. Starting the mic interrupts any reply being read aloud.
 - **Staff portals are in English.** Counsellor, teacher and admin screens are English-only; the teacher toolkit
   sheets are in both languages. The student and parent portals are fully Hindi and English.
 
