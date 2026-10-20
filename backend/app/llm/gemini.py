@@ -1,4 +1,4 @@
-"""Gemini client: counselling turns (structured JSON), escalation summaries and audio transcription.
+"""Gemini client: counselling turns (structured JSON), escalation summaries and audio transcription .
 
 Every call returns None on any failure (no key, rate limit, timeout, bad output) so the caller
 can fall back to the offline engine. After a 429 the client backs off for a minute.
