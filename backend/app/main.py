@@ -1,5 +1,6 @@
 """UDAAN prototype API. Run: uvicorn app.main:app --reload (from backend/)."""
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -7,8 +8,10 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from fastapi import FastAPI  # noqa: E402
+from fastapi import FastAPI, HTTPException  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi.responses import FileResponse  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 from . import mongo, seed  # noqa: E402
 from .llm import gemini  # noqa: E402
@@ -38,3 +41,19 @@ for r in (account.router, student.router, parent.router, reports.router, teacher
 @app.get("/api/health")
 def health():
     return {"ok": True, "gemini": gemini.status()}
+
+
+# In production (one container on Render) the API also serves the built frontend from frontend/dist.
+# Unknown paths fall back to index.html so React Router deep links like /student/stories work.
+STATIC_DIR = Path(os.getenv("UDAAN_STATIC", Path(__file__).resolve().parents[2] / "frontend" / "dist")).resolve()
+if (STATIC_DIR / "index.html").is_file():
+    app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def frontend(path: str):
+        if path.startswith("api/"):
+            raise HTTPException(404, "Not found")
+        file = (STATIC_DIR / path).resolve()
+        if path and file.is_file() and STATIC_DIR in file.parents:
+            return FileResponse(file)
+        return FileResponse(STATIC_DIR / "index.html")

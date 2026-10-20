@@ -1,0 +1,35 @@
+# Render blueprint: render.com → New → Blueprint → pick this repo.
+# Secrets marked sync: false are asked for once in the Render dashboard and never stored in git.
+services:
+  - type: web
+    name: udaan
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB_NAME
+        value: udaan
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: OTP_HMAC_SECRET
+        generateValue: true
+      - key: UDAAN_SALT
+        generateValue: true
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
