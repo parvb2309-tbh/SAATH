@@ -11,7 +11,8 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-DB_PATH = Path(os.getenv("SAATH_DB", Path(__file__).resolve().parent.parent / "saath.db"))
+_default_db = Path(__file__).resolve().parent.parent / "udaan.db"
+DB_PATH = Path(os.getenv("UDAAN_DB", _default_db))
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS districts (
@@ -101,6 +102,11 @@ CREATE TABLE IF NOT EXISTS report_shares (
 );
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, profile_id TEXT, kind TEXT, data TEXT, created_at TEXT
+);
+CREATE TABLE IF NOT EXISTS flagged_turns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT, session_id TEXT,
+    message_id INTEGER, speaker_worry TEXT, ai_response TEXT, reason TEXT,
+    note TEXT, flagged_by TEXT, status TEXT DEFAULT 'pending_review'
 );
 CREATE INDEX IF NOT EXISTS ix_messages_session ON messages(session_id);
 CREATE INDEX IF NOT EXISTS ix_attempts_profile ON simulation_attempts(profile_id);

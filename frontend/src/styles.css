@@ -148,6 +148,14 @@ a.tag:hover { border-color: var(--navy); }
 .status-verified { color: #155c3d; background: var(--success-tint); border-color: #b5dcc9; }
 .status-self-reported { color: #6a4510; background: var(--warning-tint); border-color: #e6cc9f; }
 .status-estimate { color: #6a4510; background: #fff8e6; border-color: #ecd9a6; }
+.status-pending_review { color: #6a4510; background: var(--warning-tint); border-color: #e6cc9f; }
+.status-approved { color: #155c3d; background: var(--success-tint); border-color: #b5dcc9; }
+.status-dismissed { color: var(--text-2); background: var(--tint); border-color: var(--line); }
+.tag.flag-safety_depth, .tag.flag-hallucination { background: var(--error-tint); border-color: #e7b5bb; color: #8a2633; }
+.tag.flag-status_reframe, .tag.flag-cultural_tone { background: var(--saffron-tint); border-color: #f1d3a3; color: #7a4f0e; }
+.tag.flag-wage_accuracy, .tag.flag-data_gap, .tag.flag-state_fallback { background: var(--teal-tint); border-color: #b5dcdf; color: var(--teal-dark); }
+.mini-bubble { padding: 6px 10px; border-radius: var(--radius); font-size: 12px; line-height: 1.4; background: var(--bg); border: 1px solid var(--line); }
+.mini-bubble.bot { border-left: 3px solid var(--teal); }
 
 /* ---------- forms */
 .field { display: grid; gap: 6px; }
@@ -451,6 +459,19 @@ input[type='checkbox'] { accent-color: var(--teal); }
 .mic { width: 44px; height: 44px; border-radius: var(--radius); border: 1px solid var(--saffron); background: var(--saffron); color: var(--navy); cursor: pointer; flex-shrink: 0; display: grid; place-items: center; }
 .mic.live { background: var(--error); border-color: var(--error); color: #fff; }
 .mic:disabled { background: var(--tint); border-color: var(--line); color: var(--text-2); }
+.mic.tts-playing { background: var(--teal); border-color: var(--teal); color: #fff; }
+.mic.tts-loading { background: var(--tint); border-color: var(--line); color: var(--text-2); }
+.mic-container { display: flex; align-items: center; gap: var(--s1); }
+.vad-badge { font-size: 12px; color: var(--error); font-weight: 600; white-space: nowrap; }
+.vad-badge small { color: var(--text-2); font-weight: 400; margin-left: 4px; }
+.wave-bars { display: flex; align-items: center; gap: 3px; height: 22px; }
+.wave-bars .bar { width: 3px; height: 8px; background: currentColor; border-radius: 2px; animation: wave 0.8s ease-in-out infinite alternate; }
+.wave-bars .b2 { animation-delay: 0.3s; }
+.wave-bars .b3 { animation-delay: 0.15s; }
+.wave-bars .b4 { animation-delay: 0.45s; }
+@keyframes wave { from { height: 4px; } to { height: 20px; } }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .risk-banner { display: flex; justify-content: space-between; align-items: center; gap: var(--s2); padding: 12px var(--s2); border-bottom: 1px solid; flex-wrap: wrap; }
 .risk-banner.l1 { background: var(--warning-tint); border-color: #e6cc9f; }
 .risk-banner.l2 { background: var(--saffron-tint); border-color: #f1d3a3; }

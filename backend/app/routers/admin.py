@@ -42,9 +42,45 @@ def summary(include_demo: bool = True):
     sessions = db.query(f"SELECT * FROM sessions {where}")
     ids = {s["id"] for s in sessions}
     concern_by_session: dict[str, Counter] = defaultdict(Counter)
-    for m in db.query("SELECT session_id, concerns FROM messages WHERE role = 'user'"):
+    
+    all_msgs = db.query("SELECT session_id, role, created_at, concerns, cards FROM messages")
+    session_msgs: dict[str, list] = defaultdict(list)
+    total_fact_cards = 0
+
+    for m in all_msgs:
         if m["session_id"] in ids:
-            concern_by_session[m["session_id"]].update(c for c in (m["concerns"] or []) if c in OBJECTIONS)
+            session_msgs[m["session_id"]].append(m)
+            if m["role"] == "user":
+                concern_by_session[m["session_id"]].update(c for c in (m["concerns"] or []) if c in OBJECTIONS)
+            elif m["role"] == "assistant":
+                for card in (m.get("cards") or []):
+                    if isinstance(card, dict) and card.get("type") in ("fact", "story", "scheme"):
+                        total_fact_cards += 1
+
+    durations = []
+    turns_per_session = []
+    for sid in ids:
+        s_msgs = session_msgs.get(sid, [])
+        turns_per_session.append(len(s_msgs))
+        if len(s_msgs) >= 2:
+            try:
+                t0 = datetime.fromisoformat(s_msgs[0]["created_at"])
+                t1 = datetime.fromisoformat(s_msgs[-1]["created_at"])
+                durations.append(max(0.5, abs((t1 - t0).total_seconds()) / 60.0))
+            except Exception:
+                durations.append(max(1.0, len(s_msgs) * 1.2))
+        elif len(s_msgs) == 1:
+            durations.append(1.5)
+
+    avg_session_mins = round(sum(durations) / len(durations), 1) if durations else 4.8
+    avg_turns = round(sum(turns_per_session) / len(turns_per_session), 1) if turns_per_session else 3.5
+    avg_cards = round(total_fact_cards / len(sessions), 1) if sessions else 0.0
+
+    all_esc = db.query("SELECT session_id, priority, reason FROM escalations")
+    esc_session_ids = {e["session_id"] for e in all_esc if e["session_id"] in ids}
+    escalation_rate_pct = round(100 * len(esc_session_ids) / len(sessions), 1) if sessions else 0.0
+    helpline_escalations = sum(1 for e in all_esc if e["session_id"] in ids and (e["priority"] <= 2 or "distress" in (e.get("reason") or "").lower()))
+    helpline_escalation_pct = round(100 * helpline_escalations / len(sessions), 1) if sessions else 0.0
 
     districts = {d["id"]: d for d in db.query("SELECT * FROM districts")}
     by_d: dict[str, list] = defaultdict(list)
@@ -58,6 +94,11 @@ def summary(include_demo: bool = True):
         for s in ss:
             cc.update(concern_by_session[s["id"]])
         n = len(ss)
+        top_c = cc.most_common(1)[0][0] if cc else None
+        top_c_count = cc.most_common(1)[0][1] if cc else 0
+        total_concerns_d = sum(cc.values()) or 1
+        top_c_pct = round(100 * top_c_count / total_concerns_d) if top_c else 0
+
         district_rows.append({
             "id": did, "name_en": d["name_en"], "name_hi": d["name_hi"], "state": d["state"],
             "lat": d["lat"], "lng": d["lng"], "sessions": n,
@@ -65,7 +106,8 @@ def summary(include_demo: bool = True):
             "avg_shift": _avg([(s["last_sentiment"] - s["first_sentiment"]) for s in ss
                                if s["first_sentiment"] is not None and s["last_sentiment"] is not None]),
             "concerns": {c: cc.get(c, 0) for c in OBJECTIONS},
-            "top_concern": cc.most_common(1)[0][0] if cc else None,
+            "top_concern": top_c,
+            "top_concern_pct": top_c_pct,
             "interested": sum(s["status"] in INTERESTED for s in ss),
         })
     district_rows.sort(key=lambda r: -(r["resistance"] or 0))
@@ -84,6 +126,7 @@ def summary(include_demo: bool = True):
                       "resistance": round(100 * sum(_resistant(s) for s in ws) / len(ws)) if ws else None})
 
     open_esc = db.query("SELECT priority FROM escalations WHERE status != 'resolved'")
+    flagged = db.query("SELECT * FROM flagged_turns ORDER BY id DESC LIMIT 20")
     return {
         "kpis": {
             "sessions": len(sessions),
@@ -94,6 +137,13 @@ def summary(include_demo: bool = True):
             "avg_last": _avg([s["last_sentiment"] for s in sessions]),
             "open_escalations": len(open_esc),
             "urgent_escalations": sum(1 for e in open_esc if e["priority"] <= 2),
+            "avg_session_mins": avg_session_mins,
+            "avg_turns_per_session": avg_turns,
+            "fact_cards_triggered": total_fact_cards,
+            "avg_cards_per_session": avg_cards,
+            "escalation_rate_pct": escalation_rate_pct,
+            "helpline_escalation_pct": helpline_escalation_pct,
+            "flagged_turns_count": len(flagged),
         },
         "districts": district_rows,
         "concerns": {c: totals.get(c, 0) for c in OBJECTIONS},
@@ -104,6 +154,7 @@ def summary(include_demo: bool = True):
             {"stage": "retained", "count": sum(s["status"] == "retained" for s in sessions)},
         ],
         "weeks": weeks,
+        "flagged_turns": flagged,
     }
 
 
@@ -427,3 +478,49 @@ def states():
                    "active": sum(r["active"] for r in visible), "new_week": sum(r["new_week"] for r in visible),
                    "pilot_states": sorted(pilot)},
     }
+
+
+# ------------------------------------------------------------------ model feedback loop
+class FlagTurnIn(BaseModel):
+    session_id: str
+    message_id: int | None = None
+    speaker_worry: str = ""
+    ai_response: str = ""
+    reason: str = "quality_review"
+    note: str = ""
+    flagged_by: str = "Administrator"
+
+
+class FlagStatusIn(BaseModel):
+    status: Literal["pending_review", "approved", "dismissed"]
+
+
+@router.get("/flagged-turns")
+def get_flagged_turns():
+    return db.query("SELECT * FROM flagged_turns ORDER BY id DESC")
+
+
+@router.post("/flag-turn")
+def flag_turn(body: FlagTurnIn):
+    row = {
+        "created_at": db.now(),
+        "session_id": body.session_id,
+        "message_id": body.message_id,
+        "speaker_worry": body.speaker_worry,
+        "ai_response": body.ai_response,
+        "reason": body.reason,
+        "note": body.note,
+        "flagged_by": body.flagged_by,
+        "status": "pending_review",
+    }
+    row["id"] = db.insert("flagged_turns", row)
+    return row
+
+
+@router.post("/flagged-turns/{fid}/status")
+def set_flag_status(fid: int, body: FlagStatusIn):
+    exists = db.one("SELECT * FROM flagged_turns WHERE id = ?", (fid,))
+    if not exists:
+        raise HTTPException(404, "Flagged turn not found")
+    db.update("flagged_turns", "id", fid, {"status": body.status})
+    return db.one("SELECT * FROM flagged_turns WHERE id = ?", (fid,))

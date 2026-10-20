@@ -59,7 +59,7 @@ def escalate(session_id: str, code: str, priority: int, phone: str = "", callbac
             db.update("escalations", "id", existing["id"], changes)
         return {**existing, **changes, "new": False}
 
-    transcript = "\n".join(f"{m['role']} ({m.get('speaker') or 'saath'}): {m['text']}" for m in messages[-14:] if m.get("text"))
+    transcript = "\n".join(f"{m['role']} ({m.get('speaker') or 'udaan'}): {m['text']}" for m in messages[-14:] if m.get("text"))
     summary, engine = None, "template"
     if gemini.available() and transcript:
         summary = gemini.summarize(context=_context_line(session, {}), transcript=transcript)
@@ -141,7 +141,7 @@ def handle_turn(session_id: str, text: str, speaker: str, lang: str | None = Non
                 "text": text, "lang": lang, "concerns": concerns, "sentiment": mood, "engine": engine, "cards": [],
                 "sources": []}
     user_msg["id"] = db.insert("messages", user_msg)
-    bot_msg = {"session_id": session_id, "created_at": db.now(), "role": "assistant", "speaker": "saath",
+    bot_msg = {"session_id": session_id, "created_at": db.now(), "role": "assistant", "speaker": "udaan",
                "text": reply, "lang": lang, "concerns": concerns, "sentiment": None, "engine": engine,
                "cards": cards, "sources": sources}
     bot_msg["id"] = db.insert("messages", bot_msg)
@@ -173,7 +173,7 @@ def start_message(session_id: str) -> list[dict]:
     session = db.get_session(session_id)
     facts = templates.build_facts(session)
     lang = session["language"]
-    msgs = [{"session_id": session_id, "created_at": db.now(), "role": "assistant", "speaker": "saath",
+    msgs = [{"session_id": session_id, "created_at": db.now(), "role": "assistant", "speaker": "udaan",
              "text": templates.greeting(facts), "lang": lang, "concerns": ["greeting"], "sentiment": None,
              "engine": "template", "cards": [{"type": "ladder", "id": "ladder"}] if facts.get("trade") else []}]
     worries = (session.get("quiz") or {}).get("worries") or []
@@ -182,9 +182,10 @@ def start_message(session_id: str) -> list[dict]:
         label = LABELS[top][lang]
         lead = (f"आपने बताया कि आपकी एक बड़ी चिंता है: {label}। पहले इसी की बात करते हैं। " if lang == "hi"
                 else f"You told us one big worry is: {label.lower()}. Let's start there. ")
-        msgs.append({"session_id": session_id, "created_at": db.now(), "role": "assistant", "speaker": "saath",
+        msgs.append({"session_id": session_id, "created_at": db.now(), "role": "assistant", "speaker": "udaan",
                      "text": lead + templates.reply_for(top, facts), "lang": lang, "concerns": [top],
                      "sentiment": None, "engine": "template", "cards": templates.cards_for([top], facts)})
     for m in msgs:
         m["id"] = db.insert("messages", m)
     return msgs
+

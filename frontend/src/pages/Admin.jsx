@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Check, Database, FileBarChart, Globe, Map as MapIcon, Megaphone, ScanSearch, ShieldHalf, TrendingDown, Users, X } from 'lucide-react'
+import { Check, Database, FileBarChart, Flag, Globe, Map as MapIcon, Megaphone, ScanSearch, ShieldHalf, TrendingDown, Users, X } from 'lucide-react'
 import { api } from '../lib/api'
 import { useLang } from '../lib/i18n'
 import { Link } from 'react-router-dom'
@@ -33,6 +33,7 @@ export default function Admin() {
     { to: '/admin/drivers', icon: ScanSearch, label: 'Interest drivers' },
     { to: '/admin/resistance', icon: TrendingDown, label: 'Family resistance' },
     { to: '/admin/families', icon: Megaphone, label: 'Parent updates' },
+    { to: '/admin/feedback', icon: Flag, label: 'Model feedback loop' },
     { to: '/admin/data', icon: Database, label: 'Outcome data' },
   ]
   return (
@@ -46,6 +47,7 @@ export default function Admin() {
         <Route path="drivers" element={<Drivers />} />
         <Route path="resistance" element={<Resistance />} />
         <Route path="families" element={<Families />} />
+        <Route path="feedback" element={<FeedbackLoop />} />
         <Route path="data" element={<OutcomeData />} />
       </Routes>
     </Shell>
@@ -410,6 +412,9 @@ function Resistance() {
         <div className="kpi stat"><span className="stat-label">Families counselled</span><span className="stat-value">{k.sessions}</span><span className="stat-sub">{k.live_sessions} live</span></div>
         <div className="kpi stat"><span className="stat-label">Want to go ahead</span><span className="stat-value">{k.interested_pct}%</span></div>
         <div className="kpi stat"><span className="stat-label">Family resistance</span><span className="stat-value">{k.resistance_pct}%</span></div>
+        <div className="kpi stat"><span className="stat-label">Avg session length</span><span className="stat-value">{k.avg_session_mins}m</span><span className="stat-sub">~{k.avg_turns_per_session} turns per conversation</span></div>
+        <div className="kpi stat"><span className="stat-label">Fact cards shown</span><span className="stat-value">{k.fact_cards_triggered}</span><span className="stat-sub">~{k.avg_cards_per_session} per family</span></div>
+        <div className="kpi stat"><span className="stat-label">Escalated</span><span className="stat-value">{k.escalation_rate_pct}%</span><span className="stat-sub">{k.helpline_escalation_pct}% urgent or distress</span></div>
         <div className="kpi stat"><span className="stat-label">Mood start → end</span><span className="stat-value">{fmt(k.avg_first)} → {fmt(k.avg_last)}</span></div>
         <div className="kpi stat"><span className="stat-label">Waiting for a counsellor</span><span className="stat-value">{k.open_escalations}</span><span className="stat-sub">{k.urgent_escalations} urgent</span></div>
       </div>
@@ -426,7 +431,7 @@ function Resistance() {
             <thead><tr><th>District</th><th className="num">Families</th><th className="num">Resistance</th><th>Top worry</th><th className="num">Mood shift</th></tr></thead>
             <tbody>{ranked.map((d) => (
               <tr key={d.id}><td>{d.name_en}<div className="tiny muted">{d.state}</div></td><td className="num">{d.sessions}</td><td className="num"><strong>{d.resistance}%</strong></td>
-                <td>{d.top_concern ? <span className="row"><Icon name={meta.concerns[d.top_concern].icon} size={14} />{label(d.top_concern)}</span> : '—'}</td>
+                <td>{d.top_concern ? <span className="row"><Icon name={meta.concerns[d.top_concern].icon} size={14} />{label(d.top_concern)}<span className="tiny muted">{d.top_concern_pct}%</span></span> : '—'}</td>
                 <td className="num">{fmt(d.avg_shift)}</td></tr>
             ))}</tbody>
           </table>
@@ -586,6 +591,99 @@ function OutcomeData() {
           ))}</tbody>
         </table></div>
       </section>
+    </>
+  )
+}
+
+const FLAG_REASONS = {
+  safety_depth: 'Safety concern depth (daughters, travel)',
+  status_reframe: 'Social standing and izzat reframe',
+  wage_accuracy: 'Wage or ROI figure check',
+  cultural_tone: 'Cultural tone and deference',
+  data_gap: 'Local data gap',
+  state_fallback: 'State-level figure used',
+  hallucination: 'Possible hallucination',
+}
+const EMPTY_FLAG = { session_id: '', speaker_worry: '', ai_response: '', reason: 'safety_depth', note: '', flagged_by: 'Curriculum admin' }
+
+function FeedbackLoop() {
+  const [flags, setFlags] = useState(null)
+  const [form, setForm] = useState(null)
+  const [flash, setFlash] = useState('')
+  const load = () => api.flaggedTurns().then(setFlags)
+  useEffect(() => { load() }, [])
+  const notify = (msg) => { setFlash(msg); setTimeout(() => setFlash(''), 4000) }
+  const updateStatus = async (id, status) => {
+    await api.updateFlagStatus(id, status)
+    notify(`Turn #${id} marked ${status.replace('_', ' ')}.`)
+    load()
+  }
+  const submit = async (e) => {
+    e.preventDefault()
+    await api.flagTurn(form)
+    setForm(null)
+    notify('Turn flagged for curriculum and model review.')
+    load()
+  }
+  if (!flags) return <Loading />
+  const count = (st) => flags.filter((f) => f.status === st).length
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+  return (
+    <>
+      <PageHead title="Model feedback loop" sub="Administrators and master trainers flag chat turns with tone gaps, weak safety reassurance or doubtful figures, and approve corrected dialogues for retraining.">
+        <button className="btn primary small" onClick={() => setForm(EMPTY_FLAG)}><Flag size={14} />Flag a turn</button>
+      </PageHead>
+      <div className="kpis mb">
+        <div className="kpi stat"><span className="stat-label">Flagged turns</span><span className="stat-value">{flags.length}</span></div>
+        <div className="kpi stat"><span className="stat-label">Pending review</span><span className="stat-value">{count('pending_review')}</span></div>
+        <div className="kpi stat"><span className="stat-label">Approved for training</span><span className="stat-value">{count('approved')}</span></div>
+        <div className="kpi stat"><span className="stat-label">Dismissed</span><span className="stat-value">{count('dismissed')}</span></div>
+      </div>
+      {flash && <div className="note ok"><Check size={16} /><span>{flash}</span></div>}
+      <section className="panel flush">
+        {flags.length === 0 ? <p className="muted" style={{ padding: 16 }}>No flagged turns.</p> : (
+          <div className="table-wrap"><table className="table">
+            <thead><tr><th>Session</th><th>Family said</th><th>UDAAN replied</th><th>Reason</th><th>Reviewer note</th><th>Status</th><th /></tr></thead>
+            <tbody>{flags.map((f) => (
+              <tr key={f.id}>
+                <td><strong>{f.session_id}</strong>
+                  <div className="tiny muted">{new Date(f.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+                  <div className="tiny muted">{f.flagged_by}</div></td>
+                <td style={{ maxWidth: 220 }}><div className="mini-bubble">{f.speaker_worry || '—'}</div></td>
+                <td style={{ maxWidth: 260 }}><div className="mini-bubble bot">{f.ai_response || '—'}</div></td>
+                <td><span className={`tag flag-${f.reason}`}>{FLAG_REASONS[f.reason] || f.reason}</span></td>
+                <td className="small" style={{ maxWidth: 220 }}>{f.note || '—'}</td>
+                <td><span className={`status status-${f.status}`}>{f.status.replace('_', ' ')}</span></td>
+                <td><div className="row" style={{ flexWrap: 'nowrap' }}>
+                  {f.status !== 'approved' && <button className="btn small" onClick={() => updateStatus(f.id, 'approved')}><Check size={14} />Approve</button>}
+                  {f.status !== 'dismissed' && <button className="btn small ghost" onClick={() => updateStatus(f.id, 'dismissed')}><X size={14} />Dismiss</button>}
+                </div></td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        )}
+      </section>
+      {form && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <form className="modal" onSubmit={submit}>
+            <button type="button" className="icon-btn modal-close" onClick={() => setForm(null)} aria-label="Close"><X size={16} /></button>
+            <h3>Flag a turn for review</h3>
+            <div className="grid-2">
+              <label className="field"><span>Session ID</span><input className="input" value={form.session_id} onChange={set('session_id')} required /></label>
+              <label className="field"><span>Reviewer</span><input className="input" value={form.flagged_by} onChange={set('flagged_by')} required /></label>
+            </div>
+            <label className="field"><span>Reason</span>
+              <select className="input" value={form.reason} onChange={set('reason')}>
+                {Object.entries(FLAG_REASONS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select></label>
+            <label className="field"><span>What the family said</span><textarea className="input" rows={2} value={form.speaker_worry} onChange={set('speaker_worry')} required /></label>
+            <label className="field"><span>What UDAAN replied</span><textarea className="input" rows={2} value={form.ai_response} onChange={set('ai_response')} required /></label>
+            <label className="field"><span>Correction or note</span><textarea className="input" rows={2} value={form.note} onChange={set('note')} /></label>
+            <div className="row end"><button type="button" className="btn ghost" onClick={() => setForm(null)}>Cancel</button>
+              <button type="submit" className="btn primary">Submit</button></div>
+          </form>
+        </div>
+      )}
     </>
   )
 }
