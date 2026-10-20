@@ -9,9 +9,10 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from fastapi import FastAPI, HTTPException  # noqa: E402
+from fastapi import FastAPI, HTTPException, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
-from fastapi.responses import FileResponse  # noqa: E402
+from fastapi.responses import FileResponse, JSONResponse  # noqa: E402
+from pymongo.errors import PyMongoError  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 from . import mongo, seed  # noqa: E402
@@ -37,6 +38,15 @@ app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http
 for r in (account.router, student.router, parent.router, reports.router, teacher.router, sessions.router,
           escalations.router, admin.router, speech.router):
     app.include_router(r)
+
+
+@app.exception_handler(PyMongoError)
+async def mongo_unavailable(_: Request, exc: PyMongoError):
+    # Sign-in data lives in MongoDB; say so plainly instead of a bare 500 when it is missing or unreachable.
+    logging.getLogger("udaan.mongo").error("MongoDB error: %s", str(exc)[:300])
+    return JSONResponse(status_code=503, content={
+        "detail": "Sign-in service unavailable: the account database (MongoDB) is not reachable. "
+                  "Check MONGO_URI in the server settings."})
 
 
 @app.get("/api/health")
