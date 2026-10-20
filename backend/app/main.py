@@ -50,8 +50,8 @@ async def mongo_unavailable(_: Request, exc: PyMongoError):
 
 
 @app.get("/api/health")
-def health():
-    return {"ok": True, "gemini": gemini.status()}
+async def health():
+    return {"ok": True, "gemini": gemini.status(), "mongo": await mongo.status()}
 
 
 # In production (one container on Render) the API also serves the built frontend from frontend/dist.

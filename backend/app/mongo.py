@@ -1,5 +1,7 @@
 """MongoDB connection and collection accessors using Motor (async) and PyMongo (sync)."""
 import logging
+import os
+
 from motor.motor_asyncio import AsyncIOMotorClient
 import pymongo
 
@@ -57,6 +59,22 @@ def get_sync_otp_col():
 
 def get_sync_tokens_col():
     return get_sync_db()["auth_tokens"]
+
+
+async def status() -> dict:
+    """Short account-database check for /api/health; never echoes the URI."""
+    if "MONGO_URI" not in os.environ:
+        return {"configured": False, "reachable": False, "problem": "MONGO_URI is not set on this server"}
+    try:
+        await get_db().command("ping")
+        return {"configured": True, "reachable": True, "problem": ""}
+    except pymongo.errors.OperationFailure:
+        problem = "Atlas rejected the username or password in MONGO_URI"
+    except pymongo.errors.ConfigurationError:
+        problem = "MONGO_URI is malformed"
+    except pymongo.errors.PyMongoError:
+        problem = "Cannot connect: allow 0.0.0.0/0 in Atlas Network Access"
+    return {"configured": True, "reachable": False, "problem": problem}
 
 
 async def init_mongo_indexes():

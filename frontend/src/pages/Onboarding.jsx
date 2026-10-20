@@ -236,9 +236,11 @@ function DemoAccounts({ roles = ['student', 'parent', 'counsellor', 'teacher', '
   const t = useT(S)
   const { signIn } = useSession()
   const [busy, setBusy] = useState('')
+  const [error, setError] = useState('')
   const open = async (r) => {
     setBusy(r)
-    try { signIn(await api.demoLogin(r)) } finally { setBusy('') }
+    setError('')
+    try { signIn(await api.demoLogin(r)) } catch (e) { setError(e.message) } finally { setBusy('') }
   }
   const label = {
     student: t('demoRiya') || 'Student (Riya)',
@@ -257,6 +259,7 @@ function DemoAccounts({ roles = ['student', 'parent', 'counsellor', 'teacher', '
           </button>
         ))}
       </div>
+      {error && <div className="alert" role="alert">{error}</div>}
     </div>
   )
 }
