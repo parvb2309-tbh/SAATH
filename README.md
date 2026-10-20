@@ -1,6 +1,6 @@
 # UDAAN (उड़ान): vocational career guidance and family decision support
 
-Working prototype for **SIH 2026 PS 26241**, built to the spec in [`241.pdf`](241.pdf) (Project UDAAN, Phase 1 plus all
+Working prototype for **SIH 2026 PS 26241**, built to the spec. (Project UDAAN, Phase 1 plus all
 five portals). Students discover trades through a Career DNA profile and hands-on simulations. Parents get evidence
 instead of assumptions, and the family agrees a plan together. UDAAN also has a built-in AI chat companion.
 It answers in Hindi or English, by voice or text, from verified records only.
