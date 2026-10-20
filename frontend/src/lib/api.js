@@ -52,11 +52,15 @@ const qs = (params) => {
 export const api = {
   meta: () => request('GET', '/api/meta'),
 
-  otpRequest: (mobile) => request('POST', '/api/auth/otp/request', { mobile }),
+  register: (body) => request('POST', '/api/auth/register', body),
+  login: (body) => request('POST', '/api/auth/login', body),
+  otpRequest: (body) => request('POST', '/api/auth/otp/request', body),
   otpVerify: (body) => request('POST', '/api/auth/otp/verify', body),
+  forgotPassword: (body) => request('POST', '/api/auth/forgot-password', body),
+  resetPassword: (body) => request('POST', '/api/auth/reset-password', body),
   demoLogin: (role) => request('POST', `/api/auth/demo/${role}`),
   logout: () => request('POST', '/api/auth/logout'),
-  me: () => request('GET', '/api/me'),
+  me: () => request('GET', '/api/auth/me'),
   patchMe: (body) => request('PATCH', '/api/me', body),
   setConsents: (body) => request('PUT', '/api/me/consents', body),
   myChat: () => request('POST', '/api/me/chat'),
