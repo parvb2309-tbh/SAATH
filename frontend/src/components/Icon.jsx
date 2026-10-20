@@ -1,13 +1,13 @@
 // Maps icon names stored in data (trades, concerns, activities, priorities) to lucide icons.
 import {
-  BookOpen, Briefcase, Brush, Camera, Car, CircleHelp, ClipboardList, FlaskConical, Flag, GraduationCap, Hammer, Hand,
+  BookOpen, Briefcase, Building2, Calculator, FileCheck, Brush, Camera, Car, CircleHelp, ClipboardList, FlaskConical, Flag, GraduationCap, Hammer, Hand,
   HeartHandshake, HeartPulse, IndianRupee, Keyboard, LifeBuoy, MapPin, MessageCircle, MessageSquare, Package, Palette,
   Phone, Plug, Puzzle, Scissors, Search, Shield, ShoppingBag, Siren, Snowflake, Sparkle, Store, Sun, Table, Users,
   Wallet, Wrench, Zap,
 } from 'lucide-react'
 
 const ICONS = {
-  'book-open': BookOpen, briefcase: Briefcase, brush: Brush, camera: Camera, car: Car, 'circle-help': CircleHelp,
+  'book-open': BookOpen, briefcase: Briefcase, 'building-2': Building2, calculator: Calculator, 'file-check': FileCheck, brush: Brush, camera: Camera, car: Car, 'circle-help': CircleHelp,
   'clipboard-list': ClipboardList, 'flask-conical': FlaskConical, flag: Flag, 'graduation-cap': GraduationCap,
   hammer: Hammer, hand: Hand, 'heart-handshake': HeartHandshake, 'heart-pulse': HeartPulse, 'indian-rupee': IndianRupee,
   keyboard: Keyboard, 'life-buoy': LifeBuoy, 'map-pin': MapPin, 'message-circle': MessageCircle,

@@ -117,3 +117,33 @@ def test_teacher_class_view_hides_conversations(client, login):
     assert c["size"] >= 30 and 0 <= c["dna_completion"] <= 100
     assert abs(sum(c["riasec_mean"].values()) - 1) < 0.02
     assert all(set(r) <= {"id", "student", "created_at", "status", "first_contact_at", "urgent"} for r in c["referrals"])
+
+
+def test_india_states_map_data(client, login):
+    data = client.get("/api/admin/states", headers=login("admin")).json()
+    states = {r["state"]: r for r in data["states"]}
+    assert len(states) > 25
+    assert states["Uttar Pradesh"]["pilot"] and not states["Maharashtra"]["pilot"]
+    big = states["Maharashtra"]
+    assert not big["suppressed"] and big["students"] > 0 and big["top_trades"]
+    small = [r for r in data["states"] if r["suppressed"]]
+    assert small and all(r["users"] is None and "students" not in r for r in small)
+    assert client.get("/api/admin/states", headers=login("student")).status_code == 403
+
+
+def test_career_stories_match_the_learner(client, login):
+    s = client.get("/api/student/stories", headers=login("student")).json()["stories"]
+    assert len(s) >= 12
+    top = s[0]
+    assert top["trade"]["id"] == "solar"  # Riya chose solar; she is a girl in Gaya, Bihar
+    assert "Bihar" in top["matches"] or "बिहार" in top["matches"]
+    assert len(top["steps"]) >= 4 and top["quote"] and top["outcome"]["year1"][0] > 0
+    p = client.get("/api/parent/stories", headers=login("parent")).json()["stories"]
+    assert p[0]["id"] == top["id"]
+
+
+def test_assistant_is_called_udaan(client, login):
+    h = login("student")
+    sid = client.post("/api/me/chat", headers=h).json()["session_id"]
+    first = client.get(f"/api/sessions/{sid}").json()["messages"][0]["text"]
+    assert "SAATH" not in first and ("UDAAN" in first or "उड़ान" in first)

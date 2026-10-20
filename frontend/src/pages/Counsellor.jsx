@@ -138,7 +138,7 @@ export default function Counsellor() {
                 <div className="transcript">
                   {detail.messages.filter((m) => m.text).map((m) => (
                     <div key={m.id} className={`t-row ${m.role}`}>
-                      <div className="t-who">{m.role === 'assistant' ? 'SAATH' : MEMBER[m.speaker] || m.speaker}</div>
+                      <div className="t-who">{m.role === 'assistant' ? 'UDAAN' : MEMBER[m.speaker] || m.speaker}</div>
                       <div>{m.text}</div>
                       {m.role === 'user' && (
                         <div className="t-tags">

@@ -507,6 +507,72 @@ input[type='checkbox'] { accent-color: var(--teal); }
 .sheet { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--s2); background: var(--surface); border-top: 4px solid var(--c, var(--teal)); }
 .sheet ol { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
 
+
+/* ---------- career stories */
+.story { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.story-hero { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); background: var(--navy); color: #d3dde8; }
+.story-hero-art { width: 100%; height: 100%; display: block; min-height: 240px; }
+.story-hero-text { padding: var(--s3) var(--s4); display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+.story-kicker { color: var(--saffron); font-weight: 700; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+html[lang='hi'] .story-kicker { letter-spacing: 0; }
+.story-hero h2 { color: #fff; font-size: 32px; margin: 0; }
+.story-place { font-size: 15px; }
+.story-now { display: flex; gap: 10px; align-items: baseline; font-size: 18px; font-weight: 650; color: #fff; }
+.story-now span { font-size: 12px; font-weight: 700; color: var(--navy); background: var(--saffron); padding: 2px 8px; border-radius: 2px; text-transform: uppercase; flex-shrink: 0; }
+.tag.solid-light { background: rgba(255, 255, 255, 0.1); border-color: #3c5a78; color: #fff; }
+.story-matches { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; padding-top: 10px; border-top: 1px solid #2f5070; }
+.story-chip { background: var(--teal-bright); color: var(--navy); font-weight: 650; padding: 3px 8px; border-radius: 2px; }
+.story-body { padding: var(--s3); display: grid; gap: var(--s3); }
+.story-start { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: var(--s2); align-items: stretch; }
+.story-lead { font-size: 18px; color: var(--navy); line-height: 1.5; margin: 0; }
+.story-worry { display: flex; gap: 12px; align-items: center; padding: 12px var(--s2); background: var(--saffron-tint); border: 1px solid #f1d3a3; border-radius: var(--radius); }
+.story-worry .section-title { margin: 0; }
+.story-worry-ico { width: 40px; height: 40px; display: grid; place-items: center; background: var(--saffron); color: var(--navy); border-radius: 50%; flex-shrink: 0; }
+.story-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--s2); counter-reset: s; position: relative; }
+.story-steps::before { content: ''; position: absolute; left: 20px; right: 20px; top: 20px; height: 3px; background: var(--teal-bright); }
+.story-steps li { position: relative; display: grid; gap: 6px; align-content: start; }
+.story-step-num { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--teal); color: #fff; font-weight: 700; border: 4px solid var(--surface); z-index: 1; }
+.story-step-ico { position: absolute; left: 48px; top: 8px; color: var(--teal-dark); background: var(--surface); padding: 0 6px; }
+.story-steps strong { color: var(--navy); font-size: 15px; }
+.story-steps p { margin: 0; font-size: 14px; color: var(--text-2); }
+.story-split { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--s2); }
+.story-then-now { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--s2); }
+.story-bars { display: grid; gap: 10px; margin-bottom: 10px; }
+.story-bar-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 190px; gap: 12px; align-items: center; font-size: 14px; }
+.story-bar-row strong { color: var(--navy); font-variant-numeric: tabular-nums; }
+.story-bar-row small { color: var(--text-2); font-weight: 400; }
+.story-bar { position: relative; height: 16px; background: var(--tint); }
+.story-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--teal-bright); opacity: 0.45; }
+.story-bar b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--teal); }
+.story-quote { margin: 0; padding: var(--s2) var(--s3); background: var(--saffron-tint); border: 1px solid #f1d3a3; border-radius: var(--radius); color: #8a5a12; display: grid; gap: 8px; align-content: center; }
+.story-quote blockquote { margin: 0; font-size: 19px; line-height: 1.45; color: var(--navy); font-weight: 600; }
+.story-quote figcaption { font-size: 14px; color: var(--text-2); }
+.story-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s2); align-items: center; padding-top: var(--s2); border-top: 1px solid var(--line); }
+.story-foot a.tag { text-decoration: none; }
+.story-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s2); }
+.story-card { display: grid; grid-template-columns: 112px minmax(0, 1fr) 16px; gap: 12px; align-items: center; text-align: left; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); cursor: pointer; }
+.story-card:hover { border-color: var(--navy); }
+.story-card.on { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); background: var(--teal-tint); }
+.story-card .story-scene { width: 112px; height: 75px; display: block; border-radius: 2px; }
+.story-card-body { display: grid; gap: 4px; min-width: 0; }
+.story-card-body .tag { white-space: normal; line-height: 1.25; }
+.story-card-body strong { color: var(--navy); font-size: 14px; }
+.story-card-go { color: var(--text-2); }
+.story-teaser { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: center; }
+.story-teaser .story-scene { width: 96px; height: 64px; border-radius: 2px; }
+
+/* ---------- India map */
+.india-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s2); align-items: start; }
+.india-map { height: 640px; background: #fff; border: 1px solid var(--line); z-index: 0; }
+.india-map.leaflet-container { background: #fff; }
+.india-legend { left: 10px; right: auto; }
+.state-panel h2 { margin: 0; }
+.state-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--line); border-radius: var(--radius); margin: 12px 0; }
+.state-kpis .stat { padding: 12px; border-bottom: 1px solid var(--line); }
+.state-kpis .stat:nth-child(odd) { border-right: 1px solid var(--line); }
+.state-kpis .stat:nth-last-child(-n+2) { border-bottom: 0; }
+.state-kpis .stat-value { font-size: 22px; }
+
 /* ---------- responsive */
 @media (max-width: 1100px) {
   .split, .split.left, .chat-layout, .console, .dna-layout, .report { grid-template-columns: minmax(0, 1fr); }
@@ -514,6 +580,7 @@ input[type='checkbox'] { accent-color: var(--teal); }
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sticky { position: static; }
+  .india-layout, .story-split, .story-start { grid-template-columns: minmax(0, 1fr); }
   .dna-live { order: -1; top: 56px; z-index: 5; }
 }
 @media (max-width: 860px) {
@@ -547,6 +614,18 @@ input[type='checkbox'] { accent-color: var(--teal); }
   .chat { height: calc(100vh - 56px - 96px - 40px); }
   .match-row { grid-template-columns: 24px 36px minmax(0, 1fr) 52px; padding: 12px; }
   .report-index { display: none; }
+  .story-hero { grid-template-columns: 1fr; }
+  .story-hero-text { padding: var(--s2); }
+  .story-hero h2 { font-size: 26px; }
+  .story-body { padding: var(--s2); }
+  .story-steps { grid-template-columns: 1fr; }
+  .story-steps::before { left: 19px; right: auto; top: 20px; bottom: 20px; width: 3px; height: auto; }
+  .story-steps li { grid-template-columns: 40px minmax(0, 1fr); column-gap: 12px; }
+  .story-steps li > :not(.story-step-num) { grid-column: 2; }
+  .story-step-num { grid-row: 1 / span 3; }
+  .story-step-ico { position: static; }
+  .story-bar-row { grid-template-columns: 1fr; gap: 4px; }
+  .india-map { height: 420px; }
   .report-sec { grid-template-columns: 1fr; padding: var(--s2); gap: 4px; }
   .report-cover { padding: var(--s3) var(--s2); }
   .band { grid-template-columns: 80px 1fr; }

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from .. import auth, db
 from ..catalog import PRIORITIES, RIASEC_ITEMS, SIM_BY_ID, SIMULATIONS, TRADE_PROFILES
-from ..engine import consensus, dna, evidence, match, pathway, whatif
+from ..engine import consensus, dna, evidence, match, pathway, stories, whatif
 from ..services import ensure_link_code, link_for_student, profile_for
 
 router = APIRouter(prefix="/api/student", tags=["student"])
@@ -241,6 +241,13 @@ def student_consensus(body: ConsensusIn, user: dict = Depends(student)):
     else:
         db.insert("consensus", {"link_id": link["id"], "parent_answers": None, "completed": 0, **row})
     return family(user)
+
+
+@router.get("/stories")
+def career_stories(user: dict = Depends(student)):
+    p = profile_for(user)
+    db.event("story_viewed", user["id"], p["id"])
+    return stories.rank(p, _lang(user))
 
 
 @router.get("/progress")

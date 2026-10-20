@@ -75,6 +75,7 @@ def otp_verify(body: OtpVerify):
         if body.role == "student":
             db.insert("student_profiles", {"id": new_id(), "user_id": user["id"], "created_at": db.now(), "synthetic": 0,
                                            "flags": {}, "stage": 1})
+    db.update("users", "id", user["id"], {"last_active_at": db.now()})
     return {"token": auth.issue_token(user["id"]), "is_new": is_new, **_me(user)}
 
 
@@ -124,6 +125,8 @@ def patch_me(body: MePatch, user: dict = Depends(auth.require())):
     if "chosen_trade" in changes and not db.get_trade(changes["chosen_trade"]):
         raise HTTPException(400, "Unknown trade")
     user_changes = {k: v for k, v in changes.items() if k in ("name", "preferred_lang", "district_id", "relation")}
+    if "district_id" in changes:
+        user_changes["state"] = db.get_district(changes["district_id"])["state"]
     if user_changes:
         db.update("users", "id", user["id"], user_changes)
     if user["role"] == "student":
@@ -164,7 +167,7 @@ def put_consents(body: ConsentIn, user: dict = Depends(auth.require())):
 @router.post("/me/chat")
 def my_chat(user: dict = Depends(auth.require("student", "parent"))):
     if not consents_for(user["id"]).get("ai_guidance") and user["role"] == "student":
-        raise HTTPException(403, "Turn on AI guidance in your privacy settings to talk to SAATH")
+        raise HTTPException(403, "Turn on AI guidance in your privacy settings to chat with UDAAN")
     return {"session_id": ensure_chat(user)}
 
 

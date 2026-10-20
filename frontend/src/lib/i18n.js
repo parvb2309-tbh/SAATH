@@ -37,15 +37,15 @@ export const STRINGS = {
   son: { en: 'Son', hi: 'बेटा' },
   daughter: { en: 'Daughter', hi: 'बेटी' },
 
-  // SAATH chat
-  saathName: { en: 'SAATH', hi: 'साथ' },
+  // UDAAN chat
+  assistantName: { en: 'UDAAN', hi: 'उड़ान' },
   typeHere: { en: 'Type, or press the mic and speak…', hi: 'लिखें, या माइक दबाकर बोलें…' },
   send: { en: 'Send', hi: 'भेजें' },
   listening: { en: 'Listening… tap to stop', hi: 'सुन रहे हैं… रोकने के लिए दबाएँ' },
   commonWorries: { en: 'Ask about', hi: 'इसके बारे में पूछें' },
   talkToCounsellor: { en: 'Book a counsellor', hi: 'काउंसलर से बात' },
   autoSpeak: { en: 'Speak replies', hi: 'जवाब सुनाएँ' },
-  thinkingDots: { en: 'SAATH is checking the records…', hi: 'साथ रिकॉर्ड देख रही है…' },
+  thinkingDots: { en: 'UDAAN is checking the records…', hi: 'उड़ान रिकॉर्ड देख रही है…' },
   phone: { en: 'Phone number', hi: 'फ़ोन नंबर' },
   callbackTime: { en: 'Good time to call', hi: 'फ़ोन करने का सही समय' },
   note: { en: 'Anything the counsellor should know (optional)', hi: 'काउंसलर के लिए कोई बात (ज़रूरी नहीं)' },

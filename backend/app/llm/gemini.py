@@ -25,7 +25,7 @@ class CounselTurn(BaseModel):
     needs_human: bool = Field(description="True if a human counsellor should step in")
 
 
-SYSTEM = """You are SAATH, the warm career companion inside UDAAN, helping students and families in the Hindi belt decide about vocational training.
+SYSTEM = """You are UDAAN, a warm career companion helping students and families in the Hindi belt decide about vocational training.
 You may be talking to a student alone or to their parents. Parents usually decide, so answer their worries respectfully.
 
 Rules:
@@ -104,7 +104,7 @@ def _call(contents, config):
 def counsel_turn(*, facts: dict, history: list[dict], message: str, speaker: str, lang: str) -> CounselTurn | None:
     language_name = "Hindi (Devanagari script)" if lang == "hi" else "English"
     system = SYSTEM.format(language_name=language_name, speaker=speaker, codes=", ".join(ALL))
-    convo = "\n".join(f"{'FAMILY' if m['role'] == 'user' else 'SAATH'} ({m.get('speaker') or 'saath'}): {m['text']}"
+    convo = "\n".join(f"{'FAMILY' if m['role'] == 'user' else 'UDAAN'} ({m.get('speaker') or 'saath'}): {m['text']}"
                       for m in history[-8:] if m.get("text"))
     prompt = (f"FACTS (the only source of numbers):\n{json.dumps(facts, ensure_ascii=False)}\n\n"
               f"CONVERSATION SO FAR:\n{convo or '(start)'}\n\n"
@@ -126,7 +126,7 @@ def counsel_turn(*, facts: dict, history: list[dict], message: str, speaker: str
 
 def summarize(*, context: str, transcript: str) -> str | None:
     prompt = ("Write a 2-3 sentence handover note in English for a human career counsellor who will call this family. "
-              "Say who is worried, about what, what SAATH already explained, and what the counsellor should do next. "
+              "Say who is worried, about what, what UDAAN already explained, and what the counsellor should do next. "
               f"Do not add numbers that are not in the transcript.\n\nFAMILY: {context}\n\nTRANSCRIPT:\n{transcript}")
     return _text(_call(prompt, _config()))
 

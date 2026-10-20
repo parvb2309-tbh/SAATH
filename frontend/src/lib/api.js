@@ -78,11 +78,13 @@ export const api = {
   setPermissions: (body) => request('PUT', '/api/student/family/permissions', body),
   studentConsensus: (body) => request('PUT', '/api/student/consensus', body),
   progress: () => request('GET', '/api/student/progress'),
+  studentStories: () => request('GET', '/api/student/stories'),
 
   linkChild: (code) => request('POST', '/api/parent/link', { code }),
   parentOverview: () => request('GET', '/api/parent/overview'),
   parentReport: (trade) => request('GET', `/api/parent/report${qs({ trade })}`),
   parentWhatIf: (params) => request('GET', `/api/parent/whatif${qs(params)}`),
+  parentStories: () => request('GET', '/api/parent/stories'),
   parentConsensus: () => request('GET', '/api/parent/consensus'),
   putParentConsensus: (answers) => request('PUT', '/api/parent/consensus', { answers }),
   acceptPlan: () => request('POST', '/api/parent/consensus/accept'),
@@ -104,6 +106,7 @@ export const api = {
   toolkit: () => request('GET', '/api/teacher/toolkit'),
 
   summary: (includeDemo) => request('GET', `/api/admin/summary?include_demo=${includeDemo}`),
+  states: () => request('GET', '/api/admin/states'),
   gis: (trade) => request('GET', `/api/admin/gis${qs({ trade })}`),
   barriers: (split) => request('GET', `/api/admin/barriers${qs({ split })}`),
   sidh: () => request('GET', '/api/admin/sidh'),

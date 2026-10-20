@@ -1,4 +1,4 @@
-"""SAATH chat API (the companion inside UDAAN): metadata, sessions, chat turns, risk referrals."""
+"""UDAAN chat API: metadata, sessions, chat turns, risk referrals."""
 import uuid
 from typing import Literal
 

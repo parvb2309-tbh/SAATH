@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Check, Database, FileBarChart, Map as MapIcon, Megaphone, ScanSearch, ShieldHalf, TrendingDown, Users, X } from 'lucide-react'
+import { Check, Database, FileBarChart, Globe, Map as MapIcon, Megaphone, ScanSearch, ShieldHalf, TrendingDown, Users, X } from 'lucide-react'
 import { api } from '../lib/api'
 import { useLang } from '../lib/i18n'
+import { Link } from 'react-router-dom'
 import DistrictMap, { RAMPS, SUPPRESSED, bucket } from '../components/DistrictMap'
+import IndiaMap from '../components/IndiaMap'
 import Icon from '../components/Icon'
 import Shell, { Loading, PageHead } from '../components/Shell'
 
@@ -23,7 +25,8 @@ function ChartTip({ active, payload, label, unit = '' }) {
 
 export default function Admin() {
   const items = [
-    { to: '/admin', end: true, icon: MapIcon, label: 'Skill gap map' },
+    { to: '/admin', end: true, icon: Globe, label: 'India overview' },
+    { to: '/admin/gap', icon: MapIcon, label: 'Skill gap map' },
     { to: '/admin/barriers', icon: ShieldHalf, label: 'Barrier analytics' },
     { to: '/admin/sidh', icon: Users, label: 'SIDH enrolment' },
     { to: '/admin/metrics', icon: FileBarChart, label: 'Policy outcomes' },
@@ -35,7 +38,8 @@ export default function Admin() {
   return (
     <Shell items={items} foot={<span>Aggregates only. Cohorts under 50 people are hidden and counts carry calibrated noise.</span>}>
       <Routes>
-        <Route index element={<GapMap />} />
+        <Route index element={<IndiaOverview />} />
+        <Route path="gap" element={<GapMap />} />
         <Route path="barriers" element={<Barriers />} />
         <Route path="sidh" element={<Sidh />} />
         <Route path="metrics" element={<Metrics />} />
@@ -45,6 +49,117 @@ export default function Admin() {
         <Route path="data" element={<OutcomeData />} />
       </Routes>
     </Shell>
+  )
+}
+
+const METRICS = [
+  ['students', 'Students', (v) => `${v.toLocaleString('en-IN')} students`],
+  ['parents', 'Parents', (v) => `${v.toLocaleString('en-IN')} parents`],
+  ['active', 'Active (30 days)', (v) => `${v.toLocaleString('en-IN')} active in the last 30 days`],
+  ['new_week', 'New this week', (v) => `${v.toLocaleString('en-IN')} joined this week`],
+  ['girls_pct', 'Girls %', (v) => `${v}% of students are girls`],
+]
+const STATE_COLS = [['state', 'State'], ['students', 'Students'], ['parents', 'Parents'], ['active', 'Active 30d'],
+  ['new_week', 'New 7d'], ['girls_pct', 'Girls %']]
+
+function IndiaOverview() {
+  const [d, setD] = useState(null)
+  const [metric, setMetric] = useState('students')
+  const [selected, setSelected] = useState('Uttar Pradesh')
+  const [sort, setSort] = useState(['students', -1])
+  useEffect(() => { api.states().then(setD) }, [])
+  if (!d) return <Loading />
+  const [, metricLabel, fmtValue] = METRICS.find((m) => m[0] === metric)
+  const values = Object.fromEntries(d.states.filter((r) => !r.suppressed).map((r) => [r.state, r[metric]]))
+  const suppressed = new Set(d.states.filter((r) => r.suppressed).map((r) => r.state))
+  const pilot = new Set(d.totals.pilot_states)
+  const sel = d.states.find((r) => r.state === selected)
+  const tot = d.totals
+  const [sk, dir] = sort
+  const rows = [...d.states].sort((a, b) => {
+    const x = a[sk] ?? -1
+    const y = b[sk] ?? -1
+    return (x > y ? 1 : x < y ? -1 : 0) * dir
+  })
+  const maxTrade = sel?.top_trades?.[0]?.students || 1
+  return (
+    <>
+      <PageHead title="India overview" sub="Where UDAAN's students and parents are, state by state. Pilot states also have district-level analytics." />
+      <div className="kpis mb">
+        <div className="kpi stat"><span className="stat-label">States and UTs with users</span><span className="stat-value">{tot.states}</span></div>
+        <div className="kpi stat"><span className="stat-label">Students</span><span className="stat-value">{tot.students.toLocaleString('en-IN')}</span></div>
+        <div className="kpi stat"><span className="stat-label">Parents</span><span className="stat-value">{tot.parents.toLocaleString('en-IN')}</span></div>
+        <div className="kpi stat"><span className="stat-label">Active in 30 days</span><span className="stat-value">{tot.active.toLocaleString('en-IN')}</span></div>
+        <div className="kpi stat"><span className="stat-label">Joined this week</span><span className="stat-value">{tot.new_week.toLocaleString('en-IN')}</span></div>
+      </div>
+      <div className="india-layout">
+        <section className="panel">
+          <div className="panel-head">
+            <h3>Users by state</h3>
+            <div className="seg" role="group" aria-label="Map metric">
+              {METRICS.map(([k, label]) => <button key={k} className={metric === k ? 'on' : ''} onClick={() => setMetric(k)}>{label}</button>)}
+            </div>
+          </div>
+          <IndiaMap values={values} suppressed={suppressed} pilot={pilot} selected={selected} onSelect={setSelected}
+            format={fmtValue} legendTitle={metricLabel} metricKey={metric} />
+          <PrivacyNote min={d.min_cohort} eps={d.epsilon} />
+          <p className="tiny muted">State boundaries: india-state-boundries-geojson (Apache-2.0), simplified.</p>
+        </section>
+        <section className="panel state-panel">
+          {!sel ? <p className="muted">Click a state on the map.</p> : (
+            <>
+              <div className="row between top">
+                <h2>{sel.state}</h2>
+                {sel.pilot ? <span className="tag saffron">Pilot state</span> : <span className="tag">Rollout</span>}
+              </div>
+              {sel.suppressed ? <div className="note warn mt"><span>Fewer than 50 users here, so the breakdown is hidden to protect privacy.</span></div> : (
+                <>
+                  <div className="state-kpis">
+                    <div className="stat"><span className="stat-value">{sel.students.toLocaleString('en-IN')}</span><span className="stat-label">Students</span></div>
+                    <div className="stat"><span className="stat-value">{sel.parents.toLocaleString('en-IN')}</span><span className="stat-label">Parents</span></div>
+                    <div className="stat"><span className="stat-value">{sel.active.toLocaleString('en-IN')}</span><span className="stat-label">Active in 30 days</span></div>
+                    <div className="stat"><span className="stat-value">{sel.girls_pct ?? '—'}%</span><span className="stat-label">Girls among students</span></div>
+                  </div>
+                  <div className="section-title">Most chosen trades</div>
+                  <div className="stack-1">
+                    {sel.top_trades.map((tr) => (
+                      <div key={tr.id}>
+                        <div className="row between small"><span>{tr.name}</span><strong className="mono">{tr.students}</strong></div>
+                        <div className="meter"><span style={{ width: `${(100 * tr.students) / maxTrade}%` }} /></div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="small muted mt">{sel.new_week} joined in the last 7 days.</p>
+                </>
+              )}
+              {sel.pilot && <Link to="/admin/gap" className="btn block mt">Open district gap map</Link>}
+            </>
+          )}
+        </section>
+      </div>
+      <section className="panel flush mt">
+        <div className="table-wrap"><table className="table">
+          <thead><tr>{STATE_COLS.map(([k, l]) => (
+            <th key={k} className={k === 'state' ? '' : 'num'}>
+              <button className="link" style={{ textDecoration: 'none', color: 'inherit', font: 'inherit' }}
+                onClick={() => setSort(([pk, pd]) => [k, pk === k ? -pd : -1])}>{l}{sk === k ? (dir > 0 ? ' ↑' : ' ↓') : ''}</button>
+            </th>
+          ))}</tr></thead>
+          <tbody>{rows.map((r) => (
+            <tr key={r.state} className={`clickable ${r.state === selected ? 'on' : ''}`} onClick={() => setSelected(r.state)}>
+              <td>{r.state} {r.pilot && <span className="tag saffron">Pilot</span>}</td>
+              {r.suppressed ? <td className="num muted" colSpan={5}>Fewer than 50 users, hidden</td> : (
+                <>
+                  <td className="num">{r.students.toLocaleString('en-IN')}</td><td className="num">{r.parents.toLocaleString('en-IN')}</td>
+                  <td className="num">{r.active.toLocaleString('en-IN')}</td><td className="num">{r.new_week}</td>
+                  <td className="num">{r.girls_pct ?? '—'}%</td>
+                </>
+              )}
+            </tr>
+          ))}</tbody>
+        </table></div>
+      </section>
+    </>
   )
 }
 
@@ -268,7 +383,7 @@ function Drivers() {
   )
 }
 
-// ---- Family resistance (from SAATH conversations)
+// ---- Family resistance (from UDAAN chat conversations)
 const STAGE = { sessions: 'Counselled', interested: 'Want to go ahead', enrolled: 'Enrolled', retained: 'Still in course' }
 const STATUSES = ['active', 'thinking', 'interested', 'not_interested', 'enrolled', 'retained', 'dropped']
 const fmt = (v) => (v === null || v === undefined ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`)
@@ -288,7 +403,7 @@ function Resistance() {
   const breaks = [30, 40, 50, 60]
   return (
     <>
-      <PageHead title="Family resistance" sub="Where and why families hesitate, from SAATH conversations.">
+      <PageHead title="Family resistance" sub="Where and why families hesitate, from UDAAN chat conversations.">
         <label className="toggle" style={{ padding: 0, border: 0 }}><input type="checkbox" checked={includeDemo} onChange={(e) => setIncludeDemo(e.target.checked)} /><span className="track" aria-hidden /><span className="small">Include demo sessions</span></label>
       </PageHead>
       <div className="kpis mb">
@@ -449,7 +564,7 @@ function OutcomeData() {
   const band = (lo, hi) => `₹${lo.toLocaleString('en-IN')}–${hi.toLocaleString('en-IN')}`
   return (
     <>
-      <PageHead title="Verified outcome data" sub="SAATH, the proof reports and the What-If comparator answer only from this table. Upload placement-tracker or tracer-study CSVs to replace the demo figures." />
+      <PageHead title="Verified outcome data" sub="The UDAAN chat, the proof reports and the What-If comparator answer only from this table. Upload placement-tracker or tracer-study CSVs to replace the demo figures." />
       <section className="panel mb stack-1">
         <p className="small muted">Columns: trade_id, district_id, provider, earn_low, earn_high, earn3_low, earn3_high, earn5_low, earn5_high, placement_pct, local_pct, women_pct, cohort, source, year, status (verified / self-reported / estimate). <a href="/sample_outcomes.csv" download>Download a sample file</a>.</p>
         <div className="row wrap">

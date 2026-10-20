@@ -1,4 +1,4 @@
-"""Small helpers shared by the role routers: profiles, guardian links and each user's SAATH chat session."""
+"""Small helpers shared by the role routers: profiles, guardian links and each user's UDAAN chat session."""
 import secrets
 import uuid
 
@@ -54,7 +54,7 @@ def linked_student(parent: dict) -> tuple[dict, dict] | None:
 
 
 def ensure_chat(user: dict) -> str:
-    """The user's own SAATH conversation, created on first use with what UDAAN already knows."""
+    """The user's own UDAAN conversation, created on first use with what UDAAN already knows."""
     existing = db.one("SELECT id FROM sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT 1", (user["id"],))
     if existing:
         return existing["id"]

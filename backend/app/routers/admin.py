@@ -381,3 +381,49 @@ def attribution_heatmap():
     out.sort(key=lambda r: (r["state"], r["name_en"]))
     return {"features": features, "rows": out, "min_cohort": MIN_COHORT}
 
+
+
+@router.get("/states")
+def states():
+    """Users by state for the India map. States under the N >= 50 threshold show no breakdown."""
+    rows = db.query("""
+        SELECT u.role, u.created_at, COALESCE(u.state, d.state) AS state,
+               COALESCE(p.gender, u.gender) AS gender, COALESCE(p.chosen_trade, u.interest_trade) AS trade,
+               COALESCE(u.last_active_at, u.created_at) AS seen
+        FROM users u
+        LEFT JOIN student_profiles p ON p.user_id = u.id
+        LEFT JOIN districts d ON d.id = COALESCE(p.district_id, u.district_id)
+        WHERE u.role IN ('student', 'parent')""")
+    pilot = {d["state"] for d in db.query("SELECT DISTINCT state FROM districts")}
+    now = datetime.now(timezone.utc)
+    month, week = now - timedelta(days=30), now - timedelta(days=7)
+    by_state = defaultdict(list)
+    for r in rows:
+        if r["state"]:
+            by_state[r["state"]].append(r)
+    names = {t["id"]: t["name_en"] for t in db.query("SELECT id, name_en FROM trades")}
+    out = []
+    for state, rs in sorted(by_state.items()):
+        students = [r for r in rs if r["role"] == "student"]
+        n = len(rs)
+        row = {"state": state, "pilot": state in pilot, "users": n if n >= MIN_COHORT else None, "suppressed": n < MIN_COHORT}
+        if n >= MIN_COHORT:
+            gendered = [r for r in students if r["gender"] in ("f", "m")]
+            trades = Counter(r["trade"] for r in students if r["trade"])
+            row.update(
+                students=_noisy(len(students), f"st:{state}:s"),
+                parents=_noisy(n - len(students), f"st:{state}:p"),
+                active=_noisy(sum(1 for r in rs if datetime.fromisoformat(r["seen"]) >= month), f"st:{state}:a"),
+                new_week=_noisy(sum(1 for r in rs if datetime.fromisoformat(r["created_at"]) >= week), f"st:{state}:n"),
+                girls_pct=round(100 * sum(r["gender"] == "f" for r in gendered) / len(gendered)) if gendered else None,
+                top_trades=[{"id": t, "name": names.get(t, t), "students": c} for t, c in trades.most_common(3)],
+            )
+        out.append(row)
+    visible = [r for r in out if not r["suppressed"]]
+    return {
+        "min_cohort": MIN_COHORT, "epsilon": EPSILON, "states": out,
+        "totals": {"states": len(out), "users": len(rows),
+                   "students": sum(r["students"] for r in visible), "parents": sum(r["parents"] for r in visible),
+                   "active": sum(r["active"] for r in visible), "new_week": sum(r["new_week"] for r in visible),
+                   "pilot_states": sorted(pilot)},
+    }

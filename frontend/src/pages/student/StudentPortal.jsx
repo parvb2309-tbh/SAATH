@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowRight, Calculator, Dna, Download, FlaskConical, LayoutDashboard, MessageCircle, Route as RouteIcon, Search,
+  ArrowRight, BookOpen, Calculator, Dna, Download, FlaskConical, LayoutDashboard, MessageCircle, Route as RouteIcon, Search,
   ShieldAlert, Trash2, TrendingUp, Users,
 } from 'lucide-react'
 import { api, storage } from '../../lib/api'
@@ -12,6 +12,8 @@ import Hexagon from '../../components/Hexagon'
 import { TradeIcon } from '../../components/Icon'
 import { ReportView } from '../../components/Report'
 import Shell, { ErrorNote, Loading, PageHead, PrivacyFoot } from '../../components/Shell'
+import StoryScene from '../../components/StoryScene'
+import Stories from '../Stories'
 import Tour from '../../components/Tour'
 import WhatIf from '../../components/WhatIf'
 import { ConsentToggles } from '../Onboarding'
@@ -25,7 +27,10 @@ const S = {
   nav_find: { en: 'Trade finder', hi: 'ट्रेड खोजें' },
   nav_lab: { en: 'Exploration Lab', hi: 'एक्सप्लोरेशन लैब' },
   nav_path: { en: 'Pathway', hi: 'रास्ता' },
-  nav_chat: { en: 'Ask SAATH', hi: 'साथ से पूछें' },
+  nav_stories: { en: 'Career stories', hi: 'करियर कहानियाँ' },
+  likeYou: { en: 'Someone like you', hi: 'आप जैसा कोई' },
+  readStory: { en: 'Read the story', hi: 'कहानी पढ़ें' },
+  nav_chat: { en: 'Ask UDAAN', hi: 'उड़ान से पूछें' },
   nav_family: { en: 'Family Space', hi: 'फ़ैमिली स्पेस' },
   nav_progress: { en: 'My progress', hi: 'मेरी प्रगति' },
   hello: { en: 'Namaste, {name}', hi: 'नमस्ते, {name}' },
@@ -105,6 +110,7 @@ export default function StudentPortal() {
     { to: '/student/find', icon: Search, label: t('nav_find'), tour: 'find' },
     { to: '/student/lab', icon: FlaskConical, label: t('nav_lab'), tour: 'lab' },
     { to: '/student/pathway', icon: RouteIcon, label: t('nav_path'), tour: 'path' },
+    { to: '/student/stories', icon: BookOpen, label: t('nav_stories') },
     { to: '/student/chat', icon: MessageCircle, label: t('nav_chat') },
     { to: '/student/family', icon: Users, label: t('nav_family') },
     { to: '/student/progress', icon: TrendingUp, label: t('nav_progress') },
@@ -118,6 +124,7 @@ export default function StudentPortal() {
         <Route path="lab" element={<Lab />} />
         <Route path="lab/:simId" element={<SimRunner />} />
         <Route path="pathway" element={<Pathways />} />
+        <Route path="stories" element={<Stories fetcher={api.studentStories} audience="student" />} />
         <Route path="report/:trade" element={<ReportPage />} />
         <Route path="whatif" element={<WhatIfPage />} />
         <Route path="family" element={<FamilySpace />} />
@@ -139,11 +146,11 @@ function Dashboard() {
   const [tour, setTour] = useState(() => storage.get('udaan.tour') === '1')
   const [data, setData] = useState(null)
   useEffect(() => {
-    Promise.all([api.pathway(), api.matches(), api.sims(), api.family()])
-      .then(([pathway, matches, sims, family]) => setData({ pathway, matches, sims, family }))
+    Promise.all([api.pathway(), api.matches(), api.sims(), api.family(), api.studentStories()])
+      .then(([pathway, matches, sims, family, stories]) => setData({ pathway, matches, sims, family, story: stories.stories[0] }))
   }, [lang])
   if (!data) return <Loading />
-  const { pathway, matches, sims, family } = data
+  const { pathway, matches, sims, family, story } = data
   const cur = pathway.stages.find((s) => s.n === pathway.current) || pathway.stages[0]
   const done = sims.filter((s) => s.attempts > 0).length
   const chosen = me.profile?.chosen_trade
@@ -180,6 +187,17 @@ function Dashboard() {
           ))}
         </section>
         <div className="stack">
+          {story && (
+            <section className="panel">
+              <div className="section-title">{t('likeYou')}</div>
+              <div className="story-teaser">
+                <StoryScene trade={story.trade.id} gender={story.gender} seedKey={story.id} />
+                <div><strong style={{ color: 'var(--navy)' }}>{story.name}, {story.age} · {story.district.name}</strong>
+                  <div className="small muted">{story.now}</div></div>
+              </div>
+              <Link to="/student/stories" className="btn block mt-1"><BookOpen size={16} />{t('readStory')}</Link>
+            </section>
+          )}
           <section className="panel">
             <h3>{t('labCard')}</h3>
             <p className="small muted">{t('labDone', { n: done })}</p>

@@ -1,4 +1,4 @@
-"""One SAATH turn: classify, retrieve, gather facts, answer (Gemini or templates), guard, assess risk, persist."""
+"""One UDAAN chat turn: classify, retrieve, gather facts, answer (Gemini or templates), guard, assess risk, persist."""
 from collections import Counter
 
 from .. import db

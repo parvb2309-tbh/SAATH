@@ -152,6 +152,8 @@ MIGRATIONS = {
                  "trade_changes": "INTEGER DEFAULT 0", "halted": "INTEGER DEFAULT 0"},
     "messages": {"sources": "TEXT"},
     "escalations": {"risk_level": "INTEGER DEFAULT 1", "first_contact_at": "TEXT", "consented": "INTEGER DEFAULT 1"},
+    # national demo cohort (users outside the pilot districts) and the India map
+    "users": {"state": "TEXT", "gender": "TEXT", "interest_trade": "TEXT", "last_active_at": "TEXT"},
 }
 
 

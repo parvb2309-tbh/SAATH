@@ -22,7 +22,7 @@ const S = {
   p_dna: { en: 'Your Career DNA and top matches', hi: 'आपका करियर DNA और सबसे अच्छे मेल' },
   p_simulations: { en: 'Your simulation results', hi: 'आपके सिमुलेशन के नतीजे' },
   p_pathway: { en: 'Your pathway stage', hi: 'आपके रास्ते का चरण' },
-  never: { en: 'Never shared: your private notes and your chats with SAATH.', hi: 'कभी साझा नहीं: आपके निजी नोट्स और साथ से बातचीत।' },
+  never: { en: 'Never shared: your private notes and your chats with UDAAN.', hi: 'कभी साझा नहीं: आपके निजी नोट्स और उड़ान से बातचीत।' },
   consensusTitle: { en: 'Family Consensus Builder', hi: 'परिवार की सहमति' },
   consensusSub: { en: 'Rate how much each thing matters to you. Your parent rates the same list separately; you see where you agree and what to check.', hi: 'हर बात आपके लिए कितनी ज़रूरी है, बताइए। माता-पिता अलग से यही सूची भरते हैं; फिर दिखता है कहाँ सहमति है और क्या जाँचना है।' },
   notes: { en: 'Private notes (only you can see these)', hi: 'निजी नोट्स (सिर्फ़ आप देख सकते हैं)' },

@@ -4,7 +4,7 @@ A  Conventional      2 years Class 11–12 + 3 years BA
 B  Direct vocational 2 years ITI (CTS) + 1 year NAPS apprenticeship, then work
 C  Short-term skill  6 months PMKVY (NSQF 4) + work + 3-year part-time diploma
 
-Earnings come from the trade × district outcome record (the same verified table SAATH answers from).
+Earnings come from the trade × district outcome record (the same verified table the chat answers from).
 Everything else is an editable assumption and is returned with the result so the UI can show it.
 """
 from .. import db

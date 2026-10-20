@@ -83,7 +83,7 @@ export default function Chat({ sessionId, speaker, pathwayHref, quick = true }) 
   return (
     <section className="panel chat">
       <div className="chat-head">
-        <div className="row"><strong style={{ color: 'var(--navy)' }}>{t('saathName')}</strong><span className="small muted">· {lang === 'hi' ? 'आपकी करियर साथी' : 'your career companion'}</span></div>
+        <div className="row"><strong style={{ color: 'var(--navy)' }}>{t('assistantName')}</strong><span className="small muted">· {lang === 'hi' ? 'आपकी करियर साथी' : 'your career companion'}</span></div>
         <div className="row">
           {!halted && !escalation && <button className="btn small" onClick={() => setModal('book')}><CalendarCheck size={14} />{t('talkToCounsellor')}</button>}
           <button className={`icon-btn ${autoSpeak ? 'on' : ''}`} onClick={toggleAuto} aria-pressed={autoSpeak} title={t('autoSpeak')}>
@@ -144,7 +144,7 @@ function Message({ m, pathwayHref }) {
   if (m.engine === 'quiz' || !m.text) return null
   return (
     <div className={`msg ${bot ? 'bot' : 'user'} ${m.pending ? 'pending' : ''}`}>
-      <div className="who">{bot ? `${t('saathName')}` : t(m.speaker)}</div>
+      <div className="who">{bot ? `${t('assistantName')}` : t(m.speaker)}</div>
       <div className="bubble">
         {m.text}
         {bot && (

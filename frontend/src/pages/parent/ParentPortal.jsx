@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
-import { ArrowRight, Calculator, Check, FileText, Handshake, Home, Landmark, Link2, MessageCircle } from 'lucide-react'
+import { ArrowRight, BookOpen, Calculator, Check, FileText, Handshake, Home, Landmark, Link2, MessageCircle } from 'lucide-react'
 import { api } from '../../lib/api'
 import { inr, useLang, useT } from '../../lib/i18n'
 import { useSession } from '../../lib/session'
@@ -12,14 +12,16 @@ import { ReportView } from '../../components/Report'
 import Shell, { ErrorNote, Loading, PageHead, PrivacyFoot } from '../../components/Shell'
 import WhatIf from '../../components/WhatIf'
 import { StageStrip } from '../student/StudentPortal'
+import Stories from '../Stories'
 
 const S = {
   nav_home: { en: 'Family overview', hi: 'परिवार का हाल' },
   nav_report: { en: 'Proof report', hi: 'सबूत रिपोर्ट' },
+  nav_stories: { en: 'Career stories', hi: 'करियर कहानियाँ' },
   nav_whatif: { en: 'What-If comparator', hi: 'ख़र्च की तुलना' },
   nav_consensus: { en: 'Consensus', hi: 'सहमति' },
   nav_finance: { en: 'Financial help', hi: 'आर्थिक मदद' },
-  nav_chat: { en: 'Ask SAATH', hi: 'साथ से पूछें' },
+  nav_chat: { en: 'Ask UDAAN', hi: 'उड़ान से पूछें' },
   linkTitle: { en: "Link your child's account", hi: 'बच्चे का खाता जोड़ें' },
   linkSub: { en: "Ask your child for the 6-letter family code shown in their Family Space.", hi: 'बच्चे से उसके फ़ैमिली स्पेस में दिखने वाला 6 अक्षरों का कोड माँगें।' },
   code: { en: 'Family code', hi: 'फ़ैमिली कोड' },
@@ -65,6 +67,7 @@ export default function ParentPortal() {
   const items = [
     { to: '/parent', end: true, icon: Home, label: t('nav_home') },
     { to: '/parent/report', icon: FileText, label: t('nav_report') },
+    { to: '/parent/stories', icon: BookOpen, label: t('nav_stories') },
     { to: '/parent/whatif', icon: Calculator, label: t('nav_whatif') },
     { to: '/parent/consensus', icon: Handshake, label: t('nav_consensus') },
     { to: '/parent/finance', icon: Landmark, label: t('nav_finance') },
@@ -76,6 +79,7 @@ export default function ParentPortal() {
         <Routes>
           <Route index element={<Overview />} />
           <Route path="report" element={<ParentReport />} />
+          <Route path="stories" element={<Stories fetcher={api.parentStories} audience="parent" />} />
           <Route path="whatif" element={<><PageHead title={t('nav_whatif')} sub={t('whatifSub')} /><WhatIf fetcher={api.parentWhatIf} initialTrade={me.linked_student.chosen_trade} /></>} />
           <Route path="consensus" element={<Consensus />} />
           <Route path="finance" element={<Finance />} />

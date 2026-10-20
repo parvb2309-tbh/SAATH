@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from .. import auth, db
 from ..catalog import PRIORITIES, SIM_BY_ID, TRADE_PROFILES
-from ..engine import consensus, dna, evidence, match, pathway, responder, whatif
+from ..engine import consensus, dna, evidence, match, pathway, responder, stories, whatif
 from ..services import ensure_chat, linked_student
 
 router = APIRouter(prefix="/api/parent", tags=["parent"])
@@ -98,6 +98,13 @@ def get_whatif(trade: str | None = None, band: Literal["low", "mid", "high"] = "
     db.event("whatif_viewed", user["id"], p["id"], {"trade": trade})
     return whatif.simulate(trade, p["district_id"], dict(band=band, ba_fee=ba_fee, iti_fee=iti_fee, diploma_fee=diploma_fee,
                                                          naps_stipend=naps_stipend, school_fee=school_fee))
+
+
+@router.get("/stories")
+def career_stories(user: dict = Depends(parent)):
+    lk, p = _pair(user)
+    db.event("story_viewed", user["id"], p["id"])
+    return stories.rank(p, _lang(user))
 
 
 @router.get("/consensus")

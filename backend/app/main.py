@@ -1,4 +1,4 @@
-"""UDAAN prototype API (SAATH is its chat companion). Run: uvicorn app.main:app --reload (from backend/)."""
+"""UDAAN prototype API. Run: uvicorn app.main:app --reload (from backend/)."""
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path

@@ -326,12 +326,12 @@ def greeting(facts: dict) -> str:
     joined = (" और ".join(who) if lang == "hi" else " and ".join(who))
     t = facts.get("trade")
     if lang == "hi":
-        base = (f"नमस्ते {joined}, आपका स्वागत है! मैं साथ हूँ, UDAAN की करियर साथी। मैं आपके परिवार के सवालों का जवाब "
+        base = (f"नमस्ते {joined}, आपका स्वागत है! मैं उड़ान हूँ, आपकी करियर साथी। मैं आपके परिवार के सवालों का जवाब "
                 "आपके इलाक़े के आँकड़ों से दूँगी, अंदाज़े से नहीं।")
         if t:
             base += f" हम {t['name']} के बारे में बात करेंगे। कमाई, नौकरी, सुरक्षा या समाज, जो भी चिंता हो, पूछिए।"
         return base
-    base = (f"Namaste, and welcome {joined}! I'm SAATH, your UDAAN career companion. I'll answer your family's questions with figures "
+    base = (f"Namaste, and welcome {joined}! I'm UDAAN, your career companion. I'll answer your family's questions with figures "
             "from your area, never guesses.")
     if t:
         base += f" We'll talk about {t['name']}. Ask about earnings, jobs, safety or what people will say."

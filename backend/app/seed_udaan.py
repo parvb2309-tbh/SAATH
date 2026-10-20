@@ -124,6 +124,7 @@ def seed(rng: random.Random) -> None:
 
     _cohort(rng, now, districts, class_id)
     _referrals(rng, now)
+    _national(rng, now)
     match.clear_caches()
 
 
@@ -282,3 +283,50 @@ def _referrals(rng: random.Random, now: datetime) -> None:
                                   "summary": "Resolved referral (demo).", "status": "resolved", "phone": "", "callback_time": "",
                                   "notes": "Called the learner and family; agreed next steps.", "engine": "demo", "risk_level": 2,
                                   "first_contact_at": contact.isoformat(timespec="seconds"), "consented": 1})
+
+
+# Rough population weights (crore) for states and UTs outside the three pilot states. Small UTs end up
+# under the N >= 50 threshold, which shows suppression on the India map.
+NATIONAL = {
+    "Maharashtra": 12.5, "West Bengal": 10.0, "Rajasthan": 8.0, "Tamil Nadu": 7.7, "Gujarat": 7.0, "Karnataka": 6.8,
+    "Andhra Pradesh": 5.3, "Odisha": 4.6, "Jharkhand": 4.0, "Telangana": 3.8, "Kerala": 3.5, "Assam": 3.5,
+    "Punjab": 3.0, "Chhattisgarh": 3.0, "Haryana": 2.9, "Delhi": 2.0, "Jammu & Kashmir": 1.4, "Uttarakhand": 1.1,
+    "Himachal Pradesh": 0.7, "Tripura": 0.4, "Meghalaya": 0.33, "Manipur": 0.3, "Nagaland": 0.2, "Goa": 0.16,
+    "Arunachal Pradesh": 0.15, "Puducherry": 0.15, "Mizoram": 0.12, "Chandigarh": 0.12, "Sikkim": 0.07,
+    "Dadra and Nagar Haveli and Daman and Diu": 0.06, "Andaman & Nicobar": 0.04, "Ladakh": 0.03, "Lakshadweep": 0.007,
+}
+NATIONAL_USERS = 5200
+TRADE_MIX = ["electrician", "solar", "gda", "ac_tech", "tailoring", "beauty", "auto_tech", "retail", "data_entry"]
+
+
+def _national(rng: random.Random, now: datetime) -> None:
+    """Demo students and parents across India (no district record), plus state and activity for pilot users."""
+    with db.connect() as c:
+        c.execute("UPDATE users SET state = (SELECT d.state FROM districts d WHERE d.id = users.district_id) "
+                  "WHERE district_id IS NOT NULL")
+    pilot = db.query("SELECT id, created_at FROM users WHERE synthetic = 1")
+    for u in pilot:
+        created = datetime.fromisoformat(u["created_at"])
+        seen = created + (now - created) * rng.random()
+        db.update("users", "id", u["id"], {"last_active_at": seen.isoformat(timespec="seconds")})
+
+    total = sum(NATIONAL.values())
+    rows = []
+    for state, weight in NATIONAL.items():
+        n = max(3, round(NATIONAL_USERS * weight / total))
+        # each state leans towards a few trades, so "top trade" differs across the map
+        lean = rng.sample(TRADE_MIX, 3)
+        for _ in range(n):
+            role = "student" if rng.random() < 0.63 else "parent"
+            created = now - timedelta(days=int(120 * rng.random() ** 1.3), hours=rng.randint(0, 23))
+            seen = created + (now - created) * rng.random() ** 0.6
+            rows.append({
+                "id": "nat-" + _uid(rng), "role": role, "mobile_hash": None, "name": "",
+                "relation": None if role == "student" else rng.choice(["mother", "father"]),
+                "preferred_lang": "hi", "district_id": None, "created_at": created.isoformat(timespec="seconds"),
+                "synthetic": 1, "demo_key": None, "state": state,
+                "gender": ("f" if rng.random() < 0.44 else "m") if role == "student" else None,
+                "interest_trade": (rng.choice(lean) if rng.random() < 0.7 else rng.choice(TRADE_MIX)) if role == "student" else None,
+                "last_active_at": seen.isoformat(timespec="seconds"),
+            })
+    db.insert_many("users", rows)

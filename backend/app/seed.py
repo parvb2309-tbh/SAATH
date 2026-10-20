@@ -408,7 +408,7 @@ def seed(force: bool = False) -> None:
     db.init_db()
     if db.count("districts") and db.count("users") and not force:
         return
-    # an older SAATH-only database has no UDAAN accounts: rebuild all demo data once
+    # an older chat-only database has no UDAAN accounts: rebuild all demo data once
     with db.connect() as c:
         for t in TABLES:
             c.execute(f"DELETE FROM {t}")
