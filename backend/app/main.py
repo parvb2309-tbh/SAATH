@@ -10,7 +10,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 from fastapi import FastAPI  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
-from . import seed  # noqa: E402
+from . import mongo, seed  # noqa: E402
 from .llm import gemini  # noqa: E402
 from .routers import account, admin, escalations, parent, reports, sessions, speech, student, teacher  # noqa: E402
 
@@ -19,6 +19,10 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    try:
+        await mongo.init_mongo_indexes()
+    except Exception as e:
+        logging.warning("Could not initialize MongoDB indexes on startup: %s", str(e))
     seed.seed()
     yield
 

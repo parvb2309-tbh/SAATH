@@ -3,9 +3,19 @@ from app import db
 from app.engine import retrieval
 
 
-def _new_student(client, mobile):
-    code = client.post("/api/auth/otp/request", json={"mobile": mobile}).json()["demo_code"]
-    r = client.post("/api/auth/otp/verify", json={"mobile": mobile, "code": code, "role": "student", "name": "Asha"}).json()
+def _new_student(client, tag):
+    import re
+    import uuid
+    from app.email_service import sent_emails_mock
+    uid_str = uuid.uuid4().hex[:6]
+    email = f"student_{tag}_{uid_str}@example.com"
+    reg = client.post("/api/auth/register", json={"name": "Asha", "email": email, "password": "Password@123", "role": "student"})
+    assert reg.status_code == 200, reg.text
+    email_obj = next(m for m in reversed(sent_emails_mock) if m["to"] == email)
+    code = re.search(r"\b\d{6}\b", email_obj["text"]).group(0)
+    ver = client.post("/api/auth/otp/verify", json={"email": email, "code": code, "purpose": "signup_verification"})
+    assert ver.status_code == 200, ver.text
+    r = ver.json()
     h = {"Authorization": f"Bearer {r['token']}"}
     client.patch("/api/me", headers=h, json={"district_id": "lucknow", "education_level": "10", "age": 19, "gender": "f"})
     client.put("/api/me/consents", headers=h, json={"ai_guidance": True, "counsellor_share": True, "parent_link": True,
@@ -13,12 +23,15 @@ def _new_student(client, mobile):
     return r, h
 
 
-def test_otp_login_hashes_mobile(client):
-    assert client.post("/api/auth/otp/verify", json={"mobile": "9000011111", "code": "000000", "role": "student"}).status_code == 400
-    r, _ = _new_student(client, "9000011111")
-    row = db.one("SELECT mobile_hash FROM users WHERE id = ?", (r["user"]["id"],))
-    assert row["mobile_hash"] and "9000011111" not in row["mobile_hash"] and len(row["mobile_hash"]) == 64
-    assert client.post("/api/auth/otp/request", json={"mobile": "12345"}).status_code == 400
+def test_email_registration_and_argon2(client):
+    assert client.post("/api/auth/otp/verify", json={"email": "unregistered@saath.local", "code": "000000",
+                                                     "purpose": "signup_verification"}).status_code == 400
+    r, _ = _new_student(client, "argon2_check")
+    from app import mongo
+    users_col = mongo.get_sync_users_col()
+    doc = users_col.find_one({"_id": r["user"]["id"]})
+    assert doc and doc["password_hash"].startswith("$argon2id$")
+    assert client.post("/api/auth/register", json={"name": "Test", "password": "Password@123", "role": "student", "email": "invalid"}).status_code == 400
 
 
 def test_roles_are_enforced(client, login):

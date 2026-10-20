@@ -1,87 +1,203 @@
-"""Low-friction login (spec §4.3): mobile number + OTP, with tokens sent as `Authorization: Bearer <token>`.
-
-The prototype sends no SMS (that costs money): the OTP request returns the code so the screen can show
-it, clearly labelled as a demo. Mobile numbers are stored only as salted SHA-256 hashes (spec §6.1).
-"""
-import hashlib
-import os
-import re
-import secrets
+"""Authentication dependency, session management in MongoDB, and rate limiting."""
 from datetime import datetime, timedelta, timezone
-
+import logging
+import secrets
+import time
+from collections import defaultdict
 from fastapi import Header, HTTPException
 
-from . import db
+from . import config, mongo
 
-SALT = os.getenv("UDAAN_SALT", "udaan-prototype-salt")
-OTP_TTL = timedelta(minutes=10)
+logger = logging.getLogger("saath.auth")
 ROLES = ("student", "parent", "counsellor", "teacher", "admin")
 
+# In-memory rate limiting:
+# - OTP requests cooldown: minimum 60s between OTP requests per email
+# - Max 5 OTP requests per hour per email
+# - Login brute-force protection: max 5 failed attempts per 5 minutes per identifier
+_otp_cooldown_tracker: dict[str, float] = {}
+_otp_hourly_tracker: dict[str, list[float]] = defaultdict(list)
+_failed_login_tracker: dict[str, list[float]] = defaultdict(list)
 
-def normalise_mobile(mobile: str) -> str:
-    digits = re.sub(r"\D", "", mobile or "")[-10:]
-    if len(digits) != 10 or digits[0] not in "6789":
-        raise HTTPException(400, "Enter a valid 10-digit Indian mobile number")
-    return digits
+SALT = "udaan-prototype-salt"
 
 
 def hash_mobile(mobile: str) -> str:
-    return hashlib.sha256(f"{SALT}:{normalise_mobile(mobile)}".encode()).hexdigest()
+    import hashlib
+    import re
+    digits = re.sub(r"\D", "", mobile or "")[-10:]
+    return hashlib.sha256(f"{SALT}:{digits}".encode()).hexdigest()
 
 
-def _hash_code(mobile_hash: str, code: str) -> str:
-    return hashlib.sha256(f"{mobile_hash}:{code}".encode()).hexdigest()
+def check_otp_rate_limit(email: str) -> None:
+    """Enforce a 60-second cooldown and hourly cap on OTP requests."""
+    now = time.time()
+    norm_email = email.strip().lower()
+
+    # 60-second cooldown
+    last_sent = _otp_cooldown_tracker.get(norm_email)
+    if last_sent and (now - last_sent) < 60:
+        remaining = int(60 - (now - last_sent))
+        raise HTTPException(
+            status_code=429,
+            detail=f"Please wait {remaining} seconds before requesting a new code.",
+        )
+
+    # Hourly cap (max 5 per hour)
+    recent = [t for t in _otp_hourly_tracker[norm_email] if now - t < 3600]
+    _otp_hourly_tracker[norm_email] = recent
+    if len(recent) >= 5:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many verification requests. Please try again after an hour.",
+        )
 
 
-def request_otp(mobile: str) -> str:
-    mh = hash_mobile(mobile)
-    code = f"{secrets.randbelow(900000) + 100000}"
-    with db.connect() as c:
-        c.execute("INSERT OR REPLACE INTO otp_requests (mobile_hash, code_hash, created_at, tries) VALUES (?, ?, ?, 0)",
-                  (mh, _hash_code(mh, code), db.now()))
-    return code
+def record_otp_sent(email: str) -> None:
+    now = time.time()
+    norm_email = email.strip().lower()
+    _otp_cooldown_tracker[norm_email] = now
+    _otp_hourly_tracker[norm_email].append(now)
 
 
-def verify_otp(mobile: str, code: str) -> str:
-    mh = hash_mobile(mobile)
-    row = db.one("SELECT * FROM otp_requests WHERE mobile_hash = ?", (mh,))
-    if not row or datetime.fromisoformat(row["created_at"]) + OTP_TTL < datetime.now(timezone.utc):
-        raise HTTPException(400, "The code has expired. Ask for a new one.")
-    if row["tries"] >= 5:
-        raise HTTPException(429, "Too many attempts. Ask for a new code.")
-    if not secrets.compare_digest(row["code_hash"], _hash_code(mh, (code or "").strip())):
-        db.update("otp_requests", "mobile_hash", mh, {"tries": row["tries"] + 1})
-        raise HTTPException(400, "That code is not right. Please check and try again.")
-    with db.connect() as c:
-        c.execute("DELETE FROM otp_requests WHERE mobile_hash = ?", (mh,))
-    return mh
+def check_login_rate_limit(key: str) -> None:
+    """Enforce maximum 5 failed attempts per 5 minutes."""
+    now = time.time()
+    recent = [t for t in _failed_login_tracker[key] if now - t < 300]
+    _failed_login_tracker[key] = recent
+    if len(recent) >= 5:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many failed login attempts. Please wait 5 minutes before trying again.",
+        )
 
 
-def issue_token(user_id: str) -> str:
-    token = secrets.token_urlsafe(24)
-    db.insert("auth_tokens", {"token": token, "user_id": user_id, "created_at": db.now()})
+def record_failed_login(key: str) -> None:
+    now = time.time()
+    _failed_login_tracker[key].append(now)
+
+
+def reset_failed_logins(key: str) -> None:
+    _failed_login_tracker.pop(key, None)
+
+
+async def issue_token(user_id: str) -> str:
+    """Create an authenticated session token stored in MongoDB."""
+    token = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(days=7)
+
+    tokens_col = mongo.get_tokens_col()
+    await tokens_col.insert_one({
+        "token": token,
+        "user_id": str(user_id),
+        "created_at": now,
+        "expires_at": expires_at,
+    })
     return token
 
 
+def issue_token_sync(user_id: str) -> str:
+    """Synchronous token issue for scripts / seed."""
+    token = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(days=7)
+
+    tokens_col = mongo.get_sync_tokens_col()
+    tokens_col.insert_one({
+        "token": token,
+        "user_id": str(user_id),
+        "created_at": now,
+        "expires_at": expires_at,
+    })
+    return token
+
+
+async def revoke_token(token: str) -> None:
+    """Revoke a session token from MongoDB."""
+    if token:
+        tokens_col = mongo.get_tokens_col()
+        await tokens_col.delete_one({"token": token})
+
+
+async def revoke_all_user_tokens(user_id: str) -> None:
+    """Revoke all session tokens for a user (e.g. on password reset)."""
+    if user_id:
+        tokens_col = mongo.get_tokens_col()
+        await tokens_col.delete_many({"user_id": str(user_id)})
+
+
+async def get_user_from_token(token: str) -> dict | None:
+    """Lookup user by token asynchronously."""
+    if not token:
+        return None
+    tokens_col = mongo.get_tokens_col()
+    record = await tokens_col.find_one({"token": token})
+    if not record:
+        return None
+
+    # Check expiry
+    expires_at = record.get("expires_at")
+    if expires_at and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at and expires_at < datetime.now(timezone.utc):
+        await tokens_col.delete_one({"token": token})
+        return None
+
+    users_col = mongo.get_users_col()
+    user = await users_col.find_one({"_id": record["user_id"]})
+    if not user:
+        return None
+
+    user["id"] = str(user["_id"])
+    return user
+
+
+def get_user_from_token_sync(token: str) -> dict | None:
+    """Lookup user by token synchronously (used by synchronous routes and helpers)."""
+    if not token:
+        return None
+    tokens_col = mongo.get_sync_tokens_col()
+    record = tokens_col.find_one({"token": token})
+    if not record:
+        return None
+
+    expires_at = record.get("expires_at")
+    if expires_at and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at and expires_at < datetime.now(timezone.utc):
+        tokens_col.delete_one({"token": token})
+        return None
+
+    users_col = mongo.get_sync_users_col()
+    user = users_col.find_one({"_id": record["user_id"]})
+    if not user:
+        return None
+
+    user["id"] = str(user["_id"])
+    return user
+
+
 def user_from_header(authorization: str | None) -> dict | None:
+    """Extract and authenticate user from Authorization header."""
     if not authorization or not authorization.lower().startswith("bearer "):
         return None
-    row = db.one("SELECT u.* FROM auth_tokens t JOIN users u ON u.id = t.user_id WHERE t.token = ?",
-                 (authorization[7:].strip(),))
-    return row
+    token = authorization[7:].strip()
+    return get_user_from_token_sync(token)
 
 
 def require(*roles: str):
-    """FastAPI dependency: the signed-in user, limited to the given roles."""
+    """FastAPI dependency: user must be authenticated and have an allowed role."""
     def dep(authorization: str | None = Header(default=None)) -> dict:
         user = user_from_header(authorization)
         if not user:
-            raise HTTPException(401, "Please sign in")
-        if roles and user["role"] not in roles:
-            raise HTTPException(403, "This page is for another role")
+            raise HTTPException(status_code=401, detail="Please sign in")
+        if roles and user.get("role") not in roles:
+            raise HTTPException(status_code=403, detail="This page is for another role")
         return user
     return dep
 
 
 def optional_user(authorization: str | None = Header(default=None)) -> dict | None:
+    """FastAPI dependency: optional user from header."""
     return user_from_header(authorization)

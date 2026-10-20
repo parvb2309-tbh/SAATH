@@ -32,16 +32,32 @@ const S = {
   langTitle: { en: 'Choose your language', hi: 'अपनी भाषा चुनें' },
   langSub: { en: 'You can switch at any time from the top bar.', hi: 'ऊपर की पट्टी से कभी भी बदल सकते हैं।' },
   soon: { en: 'Phase 3', hi: 'चरण 3' },
-  loginTitle: { en: 'Sign in with your mobile number', hi: 'मोबाइल नंबर से साइन इन करें' },
-  loginSub: { en: 'Aadhaar is not needed. We store only a scrambled form of your number.', hi: 'आधार की ज़रूरत नहीं। हम आपका नंबर सिर्फ़ बदले हुए रूप में रखते हैं।' },
-  mobile: { en: 'Mobile number', hi: 'मोबाइल नंबर' },
-  sendCode: { en: 'Send code', hi: 'कोड भेजें' },
-  code: { en: '6-digit code', hi: '6 अंकों का कोड' },
-  verify: { en: 'Verify and continue', hi: 'पुष्टि करें और आगे बढ़ें' },
-  demoCode: { en: 'Prototype: no SMS is sent. Your code is', hi: 'प्रोटोटाइप: कोई SMS नहीं जाता। आपका कोड है' },
-  yourName: { en: 'Your first name', hi: 'आपका नाम' },
+  loginTitle: { en: 'Sign in to UDAAN', hi: 'उड़ान में साइन इन करें' },
+  loginSub: { en: 'Enter your email and password to continue.', hi: 'आगे बढ़ने के लिए अपना ईमेल और पासवर्ड दर्ज करें।' },
+  signUpTitle: { en: 'Create your account', hi: 'अपना खाता बनाएँ' },
+  signUpSub: { en: 'Sign up with your email to start exploring trades.', hi: 'ट्रेड खोजने के लिए अपने ईमेल से खाता बनाएँ।' },
+  verifyTitle: { en: 'Verify your email address', hi: 'अपना ईमेल सत्यापित करें' },
+  verifySub: { en: 'We sent a 6-digit code to {email}. It expires in 10 minutes.', hi: 'हमने {email} पर 6 अंकों का कोड भेजा है। यह 10 मिनट में समाप्त हो जाएगा।' },
+  forgotTitle: { en: 'Reset your password', hi: 'अपना पासवर्ड रीसेट करें' },
+  forgotSub: { en: "Enter your registered email and we'll send you a reset code.", hi: 'अपना पंजीकृत ईमेल दर्ज करें और हम आपको एक रीसेट कोड भेजेंगे।' },
+  resetTitle: { en: 'Set a new password', hi: 'नया पासवर्ड सेट करें' },
+  resetSub: { en: 'Enter the verification code and your new password.', hi: 'सत्यापन कोड और अपना नया पासवर्ड दर्ज करें।' },
+  email: { en: 'Email address', hi: 'ईमेल पता' },
+  password: { en: 'Password', hi: 'पासवर्ड' },
+  newPassword: { en: 'New password (min 8 chars, letters & numbers)', hi: 'नया पासवर्ड (कम से कम 8 अक्षर, संख्या और अक्षर)' },
+  code: { en: '6-digit verification code', hi: '6 अंकों का सत्यापन कोड' },
+  verify: { en: 'Verify code and continue', hi: 'कोड सत्यापित करें और आगे बढ़ें' },
+  yourName: { en: 'Your full name', hi: 'आपका पूरा नाम' },
+  forgotPasswordLink: { en: 'Forgot password?', hi: 'पासवर्ड भूल गए?' },
+  sendResetCode: { en: 'Send reset code', hi: 'रीसेट कोड भेजें' },
+  resetPasswordBtn: { en: 'Reset password and sign in', hi: 'पासवर्ड रीसेट करें और साइन इन करें' },
+  resendCode: { en: 'Resend code', hi: 'कोड दोबारा भेजें' },
+  resendIn: { en: 'Resend in {s}s', hi: '{s}s में दोबारा भेजें' },
+  backToLogin: { en: 'Back to sign in', hi: 'साइन इन पर वापस जाएँ' },
+  dontHaveAccount: { en: "Don't have an account? Sign up", hi: 'खाता नहीं है? साइन अप करें' },
+  alreadyHaveAccount: { en: 'Already have an account? Sign in', hi: 'पहले से खाता है? साइन इन करें' },
   orDemo: { en: 'Or open a demo account', hi: 'या डेमो खाता खोलें' },
-  staffNote: { en: 'Staff accounts come from the institution (SSO in Phase 2). Use the demo account for this prototype.', hi: 'स्टाफ़ खाते संस्था देती है (चरण 2 में SSO)। इस प्रोटोटाइप में डेमो खाता इस्तेमाल करें।' },
+  staffNote: { en: 'Staff accounts (counsellor, teacher, admin) are created by institutions. Use the demo accounts below for testing.', hi: 'स्टाफ़ खाते संस्था द्वारा बनाए जाते हैं। परीक्षण के लिए नीचे दिए गए डेमो खाते का उपयोग करें।' },
   openDemo: { en: 'Open demo {role} account', hi: 'डेमो {role} खाता खोलें' },
   demoRiya: { en: 'Riya, student in Gaya', hi: 'रिया, गया की विद्यार्थी' },
   demoSunita: { en: 'Sunita, her mother', hi: 'सुनीता, उसकी माँ' },
@@ -98,6 +114,7 @@ export default function Onboarding() {
     : me.user.role === 'student' && !me.has_dna ? 'dna' : 'welcome'
   const [step, setStep] = useState(initial)
   const [role, setRole] = useState(me?.user?.role || 'student')
+  const [authMode, setAuthMode] = useState('register')
   useEffect(() => { window.scrollTo({ top: 0 }) }, [step])
 
   const flow = role === 'student' ? ['welcome', 'role', 'language', 'login', 'details', 'consent', 'dna']
@@ -110,10 +127,23 @@ export default function Onboarding() {
     <div className={`onb ${step === 'dna' ? 'wide' : ''}`}>
       {step !== 'dna' && <Aside done={n} total={flow.length} />}
       <main className="onb-main">
-        {step === 'welcome' && <Welcome onStart={() => go('role')} onLogin={() => go('login')} />}
+        {step === 'welcome' && (
+          <Welcome
+            onStart={() => { setAuthMode('register'); go('role') }}
+            onLogin={() => { setAuthMode('login'); go('login') }}
+          />
+        )}
         {step === 'role' && <RolePick role={role} setRole={setRole} step={n} total={flow.length} onNext={() => go('language')} onBack={() => go('welcome')} />}
         {step === 'language' && <LanguagePick step={n} total={flow.length} onNext={() => go('login')} onBack={() => go('role')} />}
-        {step === 'login' && <Login role={role} onBack={() => go('language')} onNew={() => go('details')} />}
+        {step === 'login' && (
+          <AuthStep
+            role={role}
+            initialMode={authMode}
+            onBack={() => go(authMode === 'login' ? 'welcome' : 'language')}
+            onNew={() => go('details')}
+            onDone={() => go('details')}
+          />
+        )}
         {step === 'details' && <Details role={me?.user?.role || role} onNext={() => go('consent')} />}
         {step === 'consent' && <Consent onNext={(r) => r === 'student' && go('dna')} />}
         {step === 'dna' && <DnaStep />}
@@ -202,7 +232,7 @@ function LanguagePick({ step, total, onNext, onBack }) {
   )
 }
 
-function DemoAccounts({ roles = ['student', 'parent'] }) {
+function DemoAccounts({ roles = ['student', 'parent', 'counsellor', 'teacher', 'admin'] }) {
   const t = useT(S)
   const { signIn } = useSession()
   const [busy, setBusy] = useState('')
@@ -210,13 +240,19 @@ function DemoAccounts({ roles = ['student', 'parent'] }) {
     setBusy(r)
     try { signIn(await api.demoLogin(r)) } finally { setBusy('') }
   }
-  const label = { student: t('demoRiya'), parent: t('demoSunita') }
+  const label = {
+    student: t('demoRiya') || 'Student (Riya)',
+    parent: t('demoSunita') || 'Parent (Sunita)',
+    counsellor: 'Counsellor (Anjali)',
+    teacher: 'Teacher (Rakesh)',
+    admin: 'District Admin',
+  }
   return (
     <div className="stack-1 mt">
       <div className="section-title">{t('orDemo')}</div>
       <div className="quick-login">
         {roles.map((r) => (
-          <button key={r} className="btn small" disabled={!!busy} onClick={() => open(r)}>
+          <button key={r} type="button" className="btn small" disabled={!!busy} onClick={() => open(r)}>
             {label[r] || t('openDemo', { role: t(`role_${r}`).toLowerCase() })}
           </button>
         ))}
@@ -225,69 +261,413 @@ function DemoAccounts({ roles = ['student', 'parent'] }) {
   )
 }
 
-function Login({ role, onBack, onNew }) {
+function AuthStep({ role, initialMode = 'login', onBack, onNew, onDone }) {
   const t = useT(S)
   const { lang } = useLang()
   const { signIn } = useSession()
-  const [mobile, setMobile] = useState('')
+
+  const staff = ['counsellor', 'teacher', 'admin'].includes(role)
+  const [mode, setMode] = useState(staff ? 'login' : initialMode)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
   const [name, setName] = useState('')
-  const [demo, setDemo] = useState('')
   const [code, setCode] = useState('')
   const [err, setErr] = useState('')
+  const [infoMsg, setInfoMsg] = useState('')
   const [busy, setBusy] = useState(false)
-  const staff = ['counsellor', 'teacher', 'admin'].includes(role)
+  const [cooldown, setCooldown] = useState(0)
 
-  const send = async (e) => {
+  // Resend OTP countdown timer
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000)
+    return () => clearInterval(timer)
+  }, [cooldown])
+
+  const handleRegister = async (e) => {
     e.preventDefault()
     setErr('')
-    setBusy(true)
-    try { setDemo((await api.otpRequest(mobile)).demo_code) } catch (x) { setErr(x.message) } finally { setBusy(false) }
-  }
-  const verify = async (e) => {
-    e.preventDefault()
-    setErr('')
+    setInfoMsg('')
     setBusy(true)
     try {
-      const res = await api.otpVerify({ mobile, code, role, lang, name })
-      signIn(res)
-      if (res.is_new || !res.onboarded) onNew()
-    } catch (x) { setErr(x.message) } finally { setBusy(false) }
+      const res = await api.register({ name, email, password, role, lang })
+      setInfoMsg(res.message || t('codeSent'))
+      setMode('verify_otp')
+      setCooldown(60)
+    } catch (x) {
+      setErr(x.message)
+    } finally {
+      setBusy(false)
+    }
   }
 
-  if (staff) {
-    return (
-      <div className="stack">
-        <h2>{t('loginTitle')}</h2>
-        <div className="note"><Info size={16} /><span>{t('staffNote')}</span></div>
-        <DemoAccounts roles={[role]} />
-        <button className="btn ghost" onClick={onBack}>{t('back')}</button>
-      </div>
-    )
+  const handleLogin = async (e) => {
+    e.preventDefault()
+    setErr('')
+    setInfoMsg('')
+    setBusy(true)
+    try {
+      const res = await api.login({ email, password })
+      signIn(res)
+      if (res.is_new || !res.onboarded) onNew()
+      else onDone?.()
+    } catch (x) {
+      setErr(x.message)
+    } finally {
+      setBusy(false)
+    }
   }
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault()
+    setErr('')
+    setInfoMsg('')
+    setBusy(true)
+    try {
+      const res = await api.otpVerify({ email, code, purpose: 'signup_verification' })
+      signIn(res)
+      if (res.is_new || !res.onboarded) onNew()
+      else onDone?.()
+    } catch (x) {
+      setErr(x.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleResendOtp = async () => {
+    if (cooldown > 0 || busy) return
+    setErr('')
+    setInfoMsg('')
+    setBusy(true)
+    try {
+      const res = await api.otpRequest({ email, purpose: 'signup_verification' })
+      setInfoMsg(res.message || t('codeSent'))
+      setCooldown(60)
+    } catch (x) {
+      setErr(x.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault()
+    setErr('')
+    setInfoMsg('')
+    setBusy(true)
+    try {
+      const res = await api.forgotPassword({ email })
+      setInfoMsg(res.message)
+      setMode('reset')
+      setCooldown(60)
+    } catch (x) {
+      setErr(x.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault()
+    setErr('')
+    setInfoMsg('')
+    setBusy(true)
+    try {
+      const res = await api.resetPassword({ email, code, new_password: newPassword })
+      setInfoMsg(res.message || t('pwdResetSuccess'))
+      setMode('login')
+      setPassword('')
+      setCode('')
+    } catch (x) {
+      setErr(x.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="stack">
-      <div><h2>{t('loginTitle')}</h2><p className="muted">{t('loginSub')}</p></div>
-      {!demo ? (
-        <form className="stack" onSubmit={send}>
-          <label className="field"><span>{t('mobile')}</span>
-            <input className="input" inputMode="numeric" autoComplete="tel-national" placeholder="98765 43210" value={mobile} onChange={(e) => setMobile(e.target.value)} />
-          </label>
-          <label className="field"><span>{t('yourName')}</span>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
-          </label>
-          <button className="btn primary" disabled={busy || mobile.replace(/\D/g, '').length < 10}>{t('sendCode')}</button>
-        </form>
-      ) : (
-        <form className="stack" onSubmit={verify}>
-          <div className="demo-otp">{t('demoCode')} <strong>{demo}</strong></div>
-          <label className="field"><span>{t('code')}</span>
-            <input className="input otp" inputMode="numeric" maxLength={6} autoFocus value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
-          </label>
-          <button className="btn primary" disabled={busy || code.length !== 6}>{t('verify')}</button>
-        </form>
+      {/* Verify OTP Mode */}
+      {mode === 'verify_otp' && (
+        <>
+          <div>
+            <h2>{t('verifyTitle')}</h2>
+            <p className="muted">{t('verifySub', { email })}</p>
+          </div>
+          <form className="stack" onSubmit={handleVerifyOtp}>
+            <label className="field">
+              <span>{t('code')}</span>
+              <input
+                className="input otp"
+                inputMode="numeric"
+                maxLength={6}
+                autoFocus
+                placeholder="123456"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              />
+            </label>
+            <button className="btn primary" disabled={busy || code.length !== 6}>
+              {busy ? 'Verifying...' : t('verify')}
+            </button>
+            <div className="row between">
+              <button
+                type="button"
+                className="btn ghost small"
+                disabled={busy || cooldown > 0}
+                onClick={handleResendOtp}
+              >
+                {cooldown > 0 ? t('resendIn', { s: cooldown }) : t('resendCode')}
+              </button>
+              <button
+                type="button"
+                className="link small"
+                onClick={() => { setMode('register'); setCode(''); setErr('') }}
+              >
+                Change email / Back
+              </button>
+            </div>
+          </form>
+        </>
       )}
+
+      {/* Forgot Password Mode */}
+      {mode === 'forgot' && (
+        <>
+          <div>
+            <h2>{t('forgotTitle')}</h2>
+            <p className="muted">{t('forgotSub')}</p>
+          </div>
+          <form className="stack" onSubmit={handleForgotPassword}>
+            <label className="field">
+              <span>{t('email')}</span>
+              <input
+                className="input"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+            <button className="btn primary" disabled={busy || !email}>
+              {busy ? 'Sending...' : t('sendResetCode')}
+            </button>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => { setMode('login'); setErr('') }}
+            >
+              {t('backToLogin')}
+            </button>
+          </form>
+        </>
+      )}
+
+      {/* Reset Password Mode */}
+      {mode === 'reset' && (
+        <>
+          <div>
+            <h2>{t('resetTitle')}</h2>
+            <p className="muted">{t('resetSub')}</p>
+          </div>
+          <form className="stack" onSubmit={handleResetPassword}>
+            <label className="field">
+              <span>{t('email')}</span>
+              <input
+                className="input"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>{t('code')}</span>
+              <input
+                className="input otp"
+                inputMode="numeric"
+                maxLength={6}
+                autoFocus
+                placeholder="123456"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              />
+            </label>
+            <label className="field">
+              <span>{t('newPassword')}</span>
+              <input
+                className="input"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </label>
+            <button className="btn primary" disabled={busy || code.length !== 6 || newPassword.length < 8}>
+              {busy ? 'Resetting...' : t('resetPasswordBtn')}
+            </button>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => { setMode('login'); setErr('') }}
+            >
+              {t('backToLogin')}
+            </button>
+          </form>
+        </>
+      )}
+
+      {/* Login Mode */}
+      {mode === 'login' && (
+        <>
+          <div>
+            <h2>{t('loginTitle')}</h2>
+            <p className="muted">{t('loginSub')}</p>
+          </div>
+          {staff && (
+            <div className="note">
+              <Info size={16} />
+              <span>{t('staffNote')}</span>
+            </div>
+          )}
+          <form className="stack" onSubmit={handleLogin}>
+            <label className="field">
+              <span>{t('email')}</span>
+              <input
+                className="input"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <div className="row between">
+                <span>{t('password')}</span>
+                <button
+                  type="button"
+                  className="link small"
+                  onClick={() => { setMode('forgot'); setErr(''); setInfoMsg('') }}
+                >
+                  {t('forgotPasswordLink')}
+                </button>
+              </div>
+              <input
+                className="input"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </label>
+            <button className="btn primary" disabled={busy || !email || !password}>
+              {busy ? 'Signing in...' : t('loginTitle')}
+            </button>
+          </form>
+          {!staff && (
+            <div className="row between">
+              <span className="small muted">{t('dontHaveAccount')}</span>
+              <button
+                type="button"
+                className="link small strong"
+                onClick={() => { setMode('register'); setErr(''); setInfoMsg('') }}
+              >
+                Sign up
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Register Mode */}
+      {mode === 'register' && (
+        <>
+          {staff ? (
+            <div>
+              <h2>{t('loginTitle')}</h2>
+              <div className="note">
+                <Info size={16} />
+                <span>{t('staffNote')}</span>
+              </div>
+              <button className="btn primary mt" onClick={() => setMode('login')}>
+                Sign in to staff account
+              </button>
+            </div>
+          ) : (
+            <>
+              <div>
+                <h2>{t('signUpTitle')}</h2>
+                <p className="muted">{t('signUpSub')}</p>
+              </div>
+              <form className="stack" onSubmit={handleRegister}>
+                <label className="field">
+                  <span>{t('yourName')}</span>
+                  <input
+                    className="input"
+                    placeholder="Asha Sharma"
+                    maxLength={60}
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>{t('email')}</span>
+                  <input
+                    className="input"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>{t('password')}</span>
+                  <input
+                    className="input"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="Minimum 8 characters"
+                    minLength={8}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </label>
+                <button className="btn primary" disabled={busy || !email || password.length < 8 || !name.trim()}>
+                  {busy ? 'Creating account...' : t('signUpTitle')}
+                </button>
+              </form>
+              <div className="row between">
+                <span className="small muted">{t('alreadyHaveAccount')}</span>
+                <button
+                  type="button"
+                  className="link small strong"
+                  onClick={() => { setMode('login'); setErr(''); setInfoMsg('') }}
+                >
+                  Sign in
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
       {err && <div className="alert">{err}</div>}
-      <DemoAccounts />
+      {infoMsg && <div className="note ok">{infoMsg}</div>}
+
+      <DemoAccounts roles={staff ? [role] : ['student', 'parent', 'counsellor', 'teacher', 'admin']} />
       <button className="btn ghost" onClick={onBack}>{t('back')}</button>
     </div>
   )

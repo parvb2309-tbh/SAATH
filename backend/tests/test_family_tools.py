@@ -63,15 +63,43 @@ def test_report_has_16_sections_and_share_link(client, login):
 
 
 def test_link_code_approves_guardian_consent(client):
-    code = client.post("/api/auth/otp/request", json={"mobile": "9811122233"}).json()["demo_code"]
-    st = client.post("/api/auth/otp/verify", json={"mobile": "9811122233", "code": code, "role": "student", "name": "Test"}).json()
+    import re
+    import uuid
+    from app.email_service import sent_emails_mock
+
+    uid = uuid.uuid4().hex[:8]
+    student_email = f"minor_{uid}@example.com"
+    parent_email = f"parent_{uid}@example.com"
+
+    # Register minor student
+    r_reg = client.post("/api/auth/register", json={
+        "name": "Test Minor", "email": student_email,
+        "password": "Password@123", "role": "student",
+    })
+    assert r_reg.status_code == 200
+    st_email_record = next(m for m in reversed(sent_emails_mock) if m["to"] == student_email)
+    code = re.search(r"\b\d{6}\b", st_email_record["text"]).group(0)
+    st = client.post("/api/auth/otp/verify", json={
+        "email": student_email, "code": code, "purpose": "signup_verification",
+    }).json()
     hs = {"Authorization": f"Bearer {st['token']}"}
     client.patch("/api/me", headers=hs, json={"district_id": "bhopal", "education_level": "10", "age": 16, "gender": "f"})
     me = client.get("/api/me", headers=hs).json()
     assert me["minor"] and me["guardian_needed"]
     link_code = client.get("/api/student/family", headers=hs).json()["link"]["code"]
-    pc = client.post("/api/auth/otp/request", json={"mobile": "9811122234"}).json()["demo_code"]
-    pa = client.post("/api/auth/otp/verify", json={"mobile": "9811122234", "code": pc, "role": "parent"}).json()
+
+    # Register parent
+    r_par = client.post("/api/auth/register", json={
+        "name": "Parent Test", "email": parent_email,
+        "password": "Password@123", "role": "parent",
+    })
+    assert r_par.status_code == 200
+    par_email_record = next(m for m in reversed(sent_emails_mock) if m["to"] == parent_email)
+    pc = re.search(r"\b\d{6}\b", par_email_record["text"]).group(0)
+    pa = client.post("/api/auth/otp/verify", json={
+        "email": parent_email, "code": pc, "purpose": "signup_verification",
+    }).json()
     hp = {"Authorization": f"Bearer {pa['token']}"}
     assert client.post("/api/parent/link", headers=hp, json={"code": link_code.lower()}).status_code == 200
     assert client.get("/api/me", headers=hs).json()["guardian_needed"] is False
+
