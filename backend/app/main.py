@@ -1,5 +1,6 @@
 """UDAAN prototype API. Run: uvicorn app.main:app --reload (from backend/)."""
 import logging
+import mimetypes
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -45,6 +46,7 @@ def health():
 
 # In production (one container on Render) the API also serves the built frontend from frontend/dist.
 # Unknown paths fall back to index.html so React Router deep links like /student/stories work.
+mimetypes.add_type("application/geo+json", ".geojson")
 STATIC_DIR = Path(os.getenv("UDAAN_STATIC", Path(__file__).resolve().parents[2] / "frontend" / "dist")).resolve()
 if (STATIC_DIR / "index.html").is_file():
     app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")

@@ -746,7 +746,7 @@ async def delete_me(user: dict = Depends(auth.require("student", "parent"))):
                                ("report_shares", "profile_id"), ("student_profiles", "id")):
                 c.execute(f"DELETE FROM {table} WHERE {col} = ?", (pid,))
         c.execute("DELETE FROM events WHERE user_id = ? OR profile_id = ?", (user_id, pid or ""))
-        for table in ("consents", "auth_tokens", "users"):
-            c.execute(f"DELETE FROM {table} WHERE user_id = ? OR id = ?", (user_id, user_id))
+        for table, col in (("consents", "user_id"), ("auth_tokens", "user_id"), ("users", "id")):
+            c.execute(f"DELETE FROM {table} WHERE {col} = ?", (user_id,))
 
     return {"deleted": True}
