@@ -4,12 +4,11 @@ simulation attempts and pathway stages, guardian links, consensus plans and risk
 ILLUSTRATIVE ONLY, like seed.py. Cohort sizes are chosen so most districts pass the N ≥ 50 privacy
 threshold and two (Muzaffarpur, Rewa) do not, which shows suppression in the admin dashboard.
 """
-import logging
 import random
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from . import auth, catalog, db, mongo, security
+from . import auth, catalog, db
 from .engine import consensus, dna, match
 
 COHORT = {"lucknow": 64, "varanasi": 58, "gorakhpur": 52, "patna": 66, "gaya": 60, "muzaffarpur": 44,
@@ -69,49 +68,23 @@ def seed(rng: random.Random) -> None:
     db.insert_many("centres", centres)
     match.clear_caches()
 
-    # ---- demo accounts (one tap on the sign-in screen)
+    # ---- demo accounts (one tap on the sign-in screen). They live only here, in SQLite, and sign in with signed
+    # tokens (auth.issue_demo_token), so the demo works whether or not MongoDB is configured.
     demo = {
-        "student": ("Riya Kumari", None, "gaya", "9000000001", "student@saath.local", "Student@123"),
-        "parent": ("Sunita Devi", "mother", "gaya", "9000000002", "parent@saath.local", "Parent@123"),
-        "counsellor": ("Anjali Verma", None, "patna", "9000000003", "counsellor@saath.local", "Counsellor@123"),
-        "teacher": ("Rakesh Kumar", None, "gaya", "9000000004", "teacher@saath.local", "Teacher@123"),
-        "admin": ("District Skill Officer", None, None, "9000000005", "admin@saath.local", "Admin@123"),
+        "student": ("Riya Kumari", None, "gaya", "9000000001"),
+        "parent": ("Sunita Devi", "mother", "gaya", "9000000002"),
+        "counsellor": ("Anjali Verma", None, "patna", "9000000003"),
+        "teacher": ("Rakesh Kumar", None, "gaya", "9000000004"),
+        "admin": ("District Skill Officer", None, None, "9000000005"),
     }
     ids = {}
-    mongo_users = mongo.get_sync_users_col()
-    mongo_ok = True
-    for role, (name, relation, district, mobile, email, pwd) in demo.items():
+    for role, (name, relation, district, mobile) in demo.items():
         ids[role] = f"demo-{role}"
         created_str = (now - timedelta(days=20)).isoformat(timespec="seconds")
         db.insert("users", {"id": ids[role], "role": role, "mobile_hash": auth.hash_mobile(mobile), "name": name,
                             "relation": relation, "preferred_lang": "hi", "district_id": district,
                             "created_at": created_str, "synthetic": 0,
                             "demo_key": role})
-        if not mongo_ok:
-            continue
-        try:
-            mongo_users.update_one(
-                {"_id": ids[role]},
-                {"$set": {
-                    "name": name,
-                    "email": email,
-                    "normalized_email": email.lower(),
-                    "password_hash": security.hash_password(pwd),
-                    "role": role,
-                    "relation": relation,
-                    "preferred_lang": "hi",
-                    "district_id": district,
-                    "is_email_verified": True,
-                    "is_active": True,
-                    "created_at": created_str,
-                    "updated_at": created_str,
-                    "last_login_at": None,
-                }},
-                upsert=True,
-            )
-        except Exception as e:  # unreachable MongoDB: stop retrying (each try waits for the timeout)
-            mongo_ok = False
-            logging.getLogger("udaan.seed").warning("Demo accounts not written to MongoDB: %s", str(e)[:160])
     class_id = "class-gaya-10b"
     db.insert("classes", {"id": class_id, "teacher_id": ids["teacher"], "name": "Class 10-B",
                           "school": "Government Inter College, Gaya", "district_id": "gaya"})

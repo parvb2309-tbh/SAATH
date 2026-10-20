@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { LogOut, Plane } from 'lucide-react'
 import { api, storage } from './lib/api'
+import { isOfflineActive, onOfflineChange } from './lib/offline'
 import { LangContext, STRINGS } from './lib/i18n'
 import { isReady, useSession } from './lib/session'
 import EngineBadge from './components/EngineBadge'
@@ -14,12 +15,15 @@ const Counsellor = lazy(() => import('./pages/Counsellor'))
 const Teacher = lazy(() => import('./pages/Teacher'))
 const Admin = lazy(() => import('./pages/Admin'))
 const PublicReport = lazy(() => import('./pages/PublicReport'))
+const Demo = lazy(() => import('./pages/Demo'))
 
 export default function App() {
   const { me, setMe, signOut } = useSession()
   const [lang, setLangState] = useState(storage.get('udaan.lang') || 'hi')
   const [meta, setMeta] = useState(null)
   const [error, setError] = useState('')
+  const [offline, setOffline] = useState(isOfflineActive())
+  useEffect(() => onOfflineChange(setOffline), [])
   const location = useLocation()
 
   const setLang = (l) => {
@@ -68,12 +72,19 @@ export default function App() {
           )}
         </div>
       </header>
+      {offline && (
+        <div className="offline-bar" role="status">
+          <span><strong>{t('offlineTitle')}</strong> {t('offlineBody')}</span>
+          <button className="btn small" onClick={() => window.location.reload()}>{t('offlineRetry')}</button>
+        </div>
+      )}
       {error && <div className="content"><div className="alert">{error} <button className="link" onClick={() => { setError(''); loadMeta() }}>{t('retry')}</button></div></div>}
       {meta && me !== undefined && syncedLang && (
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/" element={isReady(me) ? <Navigate to={`/${role}`} replace /> : <Onboarding />} />
             <Route path="/r/:token" element={<PublicReport />} />
+            <Route path="/demo/:role?" element={<Demo />} />
             <Route path="/student/*" element={<Guard role="student"><StudentPortal /></Guard>} />
             <Route path="/parent/*" element={<Guard role="parent"><ParentPortal /></Guard>} />
             <Route path="/counsellor/*" element={<Guard role="counsellor"><Counsellor /></Guard>} />

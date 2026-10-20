@@ -27,7 +27,25 @@ which engine is live.
 
 ## Demo walkthrough
 
-The sign-in screen has one-tap demo accounts. No SMS is ever sent: the OTP is shown on screen and marked as a demo.
+**Demo accounts.** Open `/demo` for all five accounts with their sign-in details. A link such as `/demo/student` signs
+that account in directly, which is useful to send to reviewers. The sign-in screen also has one-tap demo buttons, and
+its form lists the demo emails and passwords (tap a row to fill it in):
+
+| Account | Email | Password |
+|---|---|---|
+| Riya, student | `student@saath.local` | `Student@123` |
+| Sunita, parent | `parent@saath.local` | `Parent@123` |
+| Anjali, counsellor | `counsellor@saath.local` | `Counsellor@123` |
+| Rakesh, teacher | `teacher@saath.local` | `Teacher@123` |
+| District admin | `admin@saath.local` | `Admin@123` |
+
+The demo keeps working when things break:
+- **No MongoDB.** Demo accounts live in SQLite and use signed tokens, so they work when `MONGO_URI` is missing or the
+  database is down. Only new email sign-ups need MongoDB. Demo accounts are shared, so they can't be deleted.
+- **No server at all.** If the website can't reach the API, the demo accounts switch to a saved snapshot of real API
+  responses in `frontend/public/demo/`, with an "Offline demo" bar at the top. Chat replies and saving need the server.
+  The app returns to the live server once it answers again. After changing demo data or API responses, refresh the
+  snapshot with `cd backend; .\.venv\Scripts\python record_offline_demo.py`.
 
 1. **New student.** Choose *Get started*, then:
    - role → language → mobile + OTP → district and schooling;

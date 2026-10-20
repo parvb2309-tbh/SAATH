@@ -667,3 +667,30 @@ html[lang='hi'] .story-kicker { letter-spacing: 0; }
   .report-cover { background: #fff; color: var(--text); border-bottom: 3px solid var(--navy); }
   .report-cover h1 { color: var(--navy); }
 }
+
+/* Demo accounts page (/demo) and the sign-in form's demo details */
+.demo-page { max-width: 880px; margin: 0 auto; }
+.demo-list { list-style: none; margin: 0 0 var(--s3); padding: 0; display: grid; gap: var(--s2); }
+.demo-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: var(--s2); align-items: start; }
+.demo-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: var(--radius); background: var(--teal-tint); color: var(--teal-dark); }
+.demo-text h3 { margin: 0 0 4px; }
+.demo-text p { margin: 0; }
+.demo-creds { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px var(--s2); margin: var(--s2) 0 0; font-size: 13px; }
+.demo-creds dt { color: var(--text-2); }
+.demo-creds dd { margin: 0; overflow-wrap: anywhere; }
+.demo-creds code, .demo-fill code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+.demo-fill { width: 100%; border-collapse: collapse; font-size: 13px; }
+.demo-fill td { padding: 6px 8px; border-top: 1px solid var(--line); }
+.demo-fill tr { cursor: pointer; }
+.demo-fill tr:hover td, .demo-fill tr:focus-visible td { background: var(--teal-tint); }
+@media (max-width: 640px) {
+  .demo-row { grid-template-columns: 40px minmax(0, 1fr); }
+  .demo-row .btn { grid-column: 1 / -1; justify-content: center; }
+  .demo-fill .hide-sm { display: none; }
+}
+
+/* Shown while the server is unreachable and the saved offline demo is in use */
+.offline-bar { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; padding: 10px var(--s3); background: var(--saffron-tint); border-bottom: 1px solid var(--saffron); color: #6a4510; font-size: 14px; }
+.offline-bar strong { color: #4d3209; }
+.offline-bar .btn { margin-left: auto; }
+@media (max-width: 640px) { .offline-bar { padding: 10px var(--s2); } .offline-bar .btn { margin-left: 0; } }

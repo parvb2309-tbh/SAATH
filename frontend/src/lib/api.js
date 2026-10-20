@@ -1,3 +1,5 @@
+import { demoRole, goOffline, isOfflineActive, offlineRequest } from './offline'
+
 export const storage = {
   get(key) {
     try { return window.localStorage.getItem(key) } catch { return null }
@@ -21,19 +23,40 @@ export class ApiError extends Error {
   }
 }
 
+// Entry points get a time limit, so a server that never answers falls back to the offline demo instead of hanging
+const ENTRY_TIMEOUT_MS = 25000
+const isEntry = (method, url) => url === '/api/meta' || (method === 'POST' && url.startsWith('/api/auth/demo/'))
+
+// Down means no answer at all, or the host's own error page instead of a JSON reply from the API
+const serverDown = (res) => (res.status >= 500 || res.status === 404)
+  && !(res.headers.get('content-type') || '').includes('application/json')
+
 async function request(method, url, body, headers = {}, signal = undefined) {
   const isJson = body !== undefined && !(body instanceof Blob) && typeof body !== 'string'
   const token = getToken()
-  const res = await fetch(url, {
-    method,
-    headers: {
-      ...(isJson ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers,
-    },
-    body: isJson ? JSON.stringify(body) : body,
-    signal,
-  })
+  if (isOfflineActive()) return offline(method, url, body, token)
+  let res
+  try {
+    res = await fetch(url, {
+      method,
+      headers: {
+        ...(isJson ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
+      },
+      body: isJson ? JSON.stringify(body) : body,
+      signal: signal ?? (isEntry(method, url) ? AbortSignal.timeout?.(ENTRY_TIMEOUT_MS) : undefined),
+    })
+  } catch (e) {
+    if (signal?.aborted) throw e
+    res = null
+  }
+  // Signed out or on a demo account: carry on with the saved demo. Real accounts never see saved data.
+  if ((!res || serverDown(res)) && (!token || demoRole(token))) {
+    goOffline()
+    return offline(method, url, body, token)
+  }
+  if (!res) throw new ApiError('Cannot reach the UDAAN server. Check your connection and try again.', 0)
   if (!res.ok) {
     // HTTP/2 responses have no statusText, and host error pages are plain text, so always keep the status code.
     let detail = `${res.status} ${res.statusText}`.trim()
@@ -47,6 +70,14 @@ async function request(method, url, body, headers = {}, signal = undefined) {
   }
   const type = res.headers.get('content-type') || ''
   return type.includes('application/json') ? res.json() : res.blob()
+}
+
+async function offline(method, url, body, token) {
+  try {
+    return await offlineRequest(method, url, body, token)
+  } catch (e) {
+    throw new ApiError(e.message, e.status ?? 503)
+  }
 }
 
 const qs = (params) => {
@@ -64,6 +95,7 @@ export const api = {
   forgotPassword: (body) => request('POST', '/api/auth/forgot-password', body),
   resetPassword: (body) => request('POST', '/api/auth/reset-password', body),
   demoLogin: (role) => request('POST', `/api/auth/demo/${role}`),
+  demoAccounts: () => request('GET', '/api/auth/demo'),
   logout: () => request('POST', '/api/auth/logout'),
   me: () => request('GET', '/api/auth/me'),
   patchMe: (body) => request('PATCH', '/api/me', body),

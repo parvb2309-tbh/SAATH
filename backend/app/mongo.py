@@ -1,4 +1,5 @@
 """MongoDB connection and collection accessors using Motor (async) and PyMongo (sync)."""
+import asyncio
 import logging
 import os
 
@@ -66,8 +67,11 @@ async def status() -> dict:
     if "MONGO_URI" not in os.environ:
         return {"configured": False, "reachable": False, "problem": "MONGO_URI is not set on this server"}
     try:
-        await get_db().command("ping")
+        # Capped so /api/health (Render's health check) stays fast while the database is down
+        await asyncio.wait_for(get_db().command("ping"), timeout=2)
         return {"configured": True, "reachable": True, "problem": ""}
+    except asyncio.TimeoutError:
+        problem = "Cannot connect: allow 0.0.0.0/0 in Atlas Network Access"
     except pymongo.errors.OperationFailure:
         problem = "Atlas rejected the username or password in MONGO_URI"
     except pymongo.errors.ConfigurationError:

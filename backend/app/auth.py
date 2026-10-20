@@ -1,12 +1,14 @@
 """Authentication dependency, session management in MongoDB, and rate limiting."""
 from datetime import datetime, timedelta, timezone
+import hashlib
+import hmac
 import logging
 import secrets
 import time
 from collections import defaultdict
 from fastapi import Header, HTTPException
 
-from . import config, mongo
+from . import config, db, mongo
 
 logger = logging.getLogger("saath.auth")
 ROLES = ("student", "parent", "counsellor", "teacher", "admin")
@@ -81,6 +83,53 @@ def reset_failed_logins(key: str) -> None:
     _failed_login_tracker.pop(key, None)
 
 
+# ------------------------------------------------------------------ Demo accounts
+# Demo accounts live in SQLite (seeded on every start) and use signed, stateless tokens, so they keep working when
+# MongoDB is missing or down, and on hosts where each server instance has its own database (Vercel).
+DEMO_LOGINS = {
+    "student": ("student@saath.local", "Student@123"),
+    "parent": ("parent@saath.local", "Parent@123"),
+    "counsellor": ("counsellor@saath.local", "Counsellor@123"),
+    "teacher": ("teacher@saath.local", "Teacher@123"),
+    "admin": ("admin@saath.local", "Admin@123"),
+}
+DEMO_TOKEN_DAYS = 7
+
+
+def _demo_sig(body: str) -> str:
+    return hmac.new(config.OTP_HMAC_SECRET.encode(), f"demo-token:{body}".encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def issue_demo_token(role: str) -> str:
+    body = f"{role}.{int(time.time()) + DEMO_TOKEN_DAYS * 86400}"
+    return f"demo.{body}.{_demo_sig(body)}"
+
+
+def demo_role_for_login(email: str, password: str) -> str | None:
+    """The role whose published demo email and password these are, if any."""
+    for role, (demo_email, demo_password) in DEMO_LOGINS.items():
+        if email == demo_email and hmac.compare_digest(password, demo_password):
+            return role
+    return None
+
+
+def demo_user(role: str) -> dict | None:
+    row = db.one("SELECT * FROM users WHERE id = ?", (f"demo-{role}",))
+    if not row:
+        return None
+    return {**row, "_id": row["id"], "email": DEMO_LOGINS[role][0], "is_demo": True}
+
+
+def _demo_user_from_token(token: str) -> dict | None:
+    parts = token.split(".")
+    if len(parts) != 4 or parts[1] not in DEMO_LOGINS or not parts[2].isdigit():
+        return None
+    _, role, expires, sig = parts
+    if not hmac.compare_digest(sig, _demo_sig(f"{role}.{expires}")) or int(expires) < time.time():
+        return None
+    return demo_user(role)
+
+
 async def issue_token(user_id: str) -> str:
     """Create an authenticated session token stored in MongoDB."""
     token = secrets.token_urlsafe(32)
@@ -115,7 +164,7 @@ def issue_token_sync(user_id: str) -> str:
 
 async def revoke_token(token: str) -> None:
     """Revoke a session token from MongoDB."""
-    if token:
+    if token and not token.startswith("demo."):
         tokens_col = mongo.get_tokens_col()
         await tokens_col.delete_one({"token": token})
 
@@ -131,6 +180,8 @@ async def get_user_from_token(token: str) -> dict | None:
     """Lookup user by token asynchronously."""
     if not token:
         return None
+    if token.startswith("demo."):
+        return _demo_user_from_token(token)
     tokens_col = mongo.get_tokens_col()
     record = await tokens_col.find_one({"token": token})
     if not record:
@@ -157,6 +208,8 @@ def get_user_from_token_sync(token: str) -> dict | None:
     """Lookup user by token synchronously (used by synchronous routes and helpers)."""
     if not token:
         return None
+    if token.startswith("demo."):
+        return _demo_user_from_token(token)
     tokens_col = mongo.get_sync_tokens_col()
     record = tokens_col.find_one({"token": token})
     if not record:

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { api, getToken, setToken } from './api'
+import { demoRole, isOfflineActive, isOfflineToken } from './offline'
 
 const SessionContext = createContext(null)
 export const useSession = () => useContext(SessionContext)
@@ -16,8 +17,11 @@ export function SessionProvider({ children }) {
   const [me, setMe] = useState(getToken() ? undefined : null)
 
   const refresh = useCallback(async () => {
-    if (!getToken()) return setMe(null)
+    const token = getToken()
+    if (!token) return setMe(null)
     try {
+      // A saved offline-demo session: sign that demo account in again, live if the server is back
+      if (isOfflineToken(token) && !isOfflineActive()) return signIn(await api.demoLogin(demoRole(token)))
       setMe(await api.me())
     } catch (e) {
       if (e.status === 401) setToken(null)

@@ -160,3 +160,34 @@ def test_assistant_is_called_udaan(client, login):
     sid = client.post("/api/me/chat", headers=h).json()["session_id"]
     first = client.get(f"/api/sessions/{sid}").json()["messages"][0]["text"]
     assert "SAATH" not in first and ("UDAAN" in first or "उड़ान" in first)
+
+
+def test_demo_accounts_work_without_mongodb(client, monkeypatch):
+    from pymongo.errors import ServerSelectionTimeoutError
+
+    from app import mongo
+
+    def down():
+        raise ServerSelectionTimeoutError("no MongoDB in this test")
+    for name in ("get_users_col", "get_tokens_col", "get_otp_col", "get_sync_users_col", "get_sync_tokens_col"):
+        monkeypatch.setattr(mongo, name, down)
+
+    r = client.post("/api/auth/demo/student")
+    assert r.status_code == 200 and r.json()["user"]["id"] == "demo-student"
+    h = {"Authorization": f"Bearer {r.json()['token']}"}
+    assert client.get("/api/student/dna", headers=h).status_code == 200
+    assert client.patch("/api/me", headers=h, json={"preferred_lang": "en"}).json()["user"]["preferred_lang"] == "en"
+    assert client.delete("/api/me", headers=h).status_code == 403  # the shared demo cannot be deleted
+    client.patch("/api/me", headers=h, json={"preferred_lang": "hi"})
+
+    # the published demo email and password also work, and only for their own role
+    creds = {d["role"]: d for d in client.get("/api/auth/demo").json()}
+    r = client.post("/api/auth/login", json={"email": creds["admin"]["email"], "password": creds["admin"]["password"]})
+    assert r.status_code == 200 and r.json()["user"]["role"] == "admin"
+    assert client.get("/api/admin/states", headers={"Authorization": f"Bearer {r.json()['token']}"}).status_code == 200
+    wrong = client.post("/api/auth/login", json={"email": creds["admin"]["email"], "password": "Student@123"})
+    assert wrong.status_code == 503  # not a demo login, so it goes to the (unreachable) account database
+
+    # a token edited to claim another role is rejected
+    _, role, expires, sig = r.json()["token"].split(".")
+    assert client.get("/api/auth/me", headers={"Authorization": f"Bearer demo.counsellor.{expires}.{sig}"}).status_code == 401

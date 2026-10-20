@@ -14,6 +14,12 @@ export const STRINGS = {
   signOut: { en: 'Sign out', hi: 'साइन आउट' },
   loading: { en: 'Loading…', hi: 'लोड हो रहा है…' },
   retry: { en: 'Retry', hi: 'फिर कोशिश करें' },
+  offlineTitle: { en: 'Offline demo.', hi: 'ऑफ़लाइन डेमो।' },
+  offlineBody: {
+    en: 'The UDAAN server cannot be reached, so you are seeing saved demo data. Changes will not be saved.',
+    hi: 'उड़ान सर्वर से संपर्क नहीं हो पा रहा, इसलिए आप सहेजा हुआ डेमो डेटा देख रहे हैं। बदलाव सहेजे नहीं जाएँगे।',
+  },
+  offlineRetry: { en: 'Try the live server', hi: 'लाइव सर्वर फिर आज़माएँ' },
   months: { en: 'months', hi: 'महीने' },
   perMonth: { en: '/ month', hi: '/ महीना' },
   km: { en: 'km', hi: 'किमी' },

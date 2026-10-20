@@ -404,6 +404,11 @@ async def login(body: LoginRequest, request: Request):
     # Rate limiting on failed login attempts
     auth.check_login_rate_limit(rate_key)
 
+    # The published demo credentials sign in without MongoDB
+    demo_role = auth.demo_role_for_login(norm_email, body.password)
+    if demo_role:
+        return await demo_login(demo_role)
+
     users_col = mongo.get_users_col()
     user = await users_col.find_one({"normalized_email": norm_email})
 
@@ -581,30 +586,20 @@ async def reset_password(body: ResetPasswordRequest):
     }
 
 
-# Backwards compatibility demo login for automated tests & local development
 @router.post("/auth/demo/{role}")
 async def demo_login(role: Role):
-    """Sign in to seeded demo account for local development/testing."""
-    demo_email_map = {
-        "student": "student@saath.local",
-        "parent": "parent@saath.local",
-        "counsellor": "counsellor@saath.local",
-        "teacher": "teacher@saath.local",
-        "admin": "admin@saath.local",
-    }
-    target_email = demo_email_map.get(role)
-    users_col = mongo.get_users_col()
-    user = await users_col.find_one({"normalized_email": target_email})
-    if not user:
-        # Fallback to demo key lookup
-        user = await users_col.find_one({"_id": f"demo-{role}"})
+    """One-tap sign-in to a seeded demo account. Needs only SQLite, never MongoDB."""
+    user = auth.demo_user(role)
     if not user:
         raise HTTPException(status_code=404, detail=f"Demo account for {role} not found. Please reseed the database.")
+    return {"token": auth.issue_demo_token(role), "is_new": False, **_me(user)}
 
-    user_id = str(user["_id"])
-    user["id"] = user_id
-    token = await auth.issue_token(user_id)
-    return {"token": token, "is_new": False, **_me(user)}
+
+@router.get("/auth/demo")
+def demo_accounts():
+    """The demo sign-in details shown on the sign-in screen."""
+    return [{"role": role, "email": email, "password": password}
+            for role, (email, password) in auth.DEMO_LOGINS.items()]
 
 
 # ------------------------------------------------------------------ User Profile & Consents
@@ -621,12 +616,11 @@ async def patch_me(body: MePatch, user: dict = Depends(auth.require())):
     user_changes = {k: v for k, v in changes.items() if k in ("name", "preferred_lang", "district_id", "relation")}
 
     if user_changes:
-        # Update MongoDB
-        users_col = mongo.get_users_col()
-        await users_col.update_one(
-            {"_id": user["_id"]},
-            {"$set": {**user_changes, "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}},
-        )
+        if not user.get("is_demo"):  # demo accounts live only in SQLite
+            await mongo.get_users_col().update_one(
+                {"_id": user["_id"]},
+                {"$set": {**user_changes, "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}},
+            )
         # Sync to SQLite; the admin India map groups users by state
         if "district_id" in user_changes:
             user_changes["state"] = db.get_district(user_changes["district_id"])["state"]
@@ -649,6 +643,8 @@ async def patch_me(body: MePatch, user: dict = Depends(auth.require())):
         with db.connect() as c:
             c.execute("UPDATE sessions SET language = ? WHERE user_id = ?", (changes["preferred_lang"], user_id))
 
+    if user.get("is_demo"):
+        return _me(auth.demo_user(user["role"]))
     updated_user = await mongo.get_users_col().find_one({"_id": user["_id"]})
     updated_user["id"] = user_id
     return _me(updated_user)
@@ -714,6 +710,8 @@ def export_me(user: dict = Depends(auth.require("student", "parent"))):
 
 @router.delete("/me")
 async def delete_me(user: dict = Depends(auth.require("student", "parent"))):
+    if user.get("is_demo"):
+        raise HTTPException(403, "Demo accounts are shared and cannot be deleted. Create your own account to try this.")
     data = _owned(user)
     user_id = str(user["id"])
     pid = data["profile"] and data["profile"]["id"]

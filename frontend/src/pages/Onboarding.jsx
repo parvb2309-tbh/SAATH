@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { BookOpenCheck, Building2, Check, ChevronRight, GraduationCap, Info, Landmark, ShieldCheck, Users } from 'lucide-react'
 import { api, storage } from '../lib/api'
 import { pick, tr, useLang, useT } from '../lib/i18n'
@@ -61,6 +61,9 @@ const S = {
   openDemo: { en: 'Open demo {role} account', hi: 'डेमो {role} खाता खोलें' },
   demoRiya: { en: 'Riya, student in Gaya', hi: 'रिया, गया की विद्यार्थी' },
   demoSunita: { en: 'Sunita, her mother', hi: 'सुनीता, उसकी माँ' },
+  demoDetails: { en: 'Demo sign-in details', hi: 'डेमो साइन-इन विवरण' },
+  allDemos: { en: 'All demo accounts', hi: 'सभी डेमो खाते' },
+  tapToFill: { en: 'Fill in this email and password', hi: 'यह ईमेल और पासवर्ड भरें' },
   aboutYou: { en: 'A little about you', hi: 'आपके बारे में थोड़ा' },
   aboutSub: { en: 'Used to find centres near you and courses you can join.', hi: 'पास के सेंटर और आपके लायक कोर्स ढूँढने के लिए।' },
   district: { en: 'District', hi: 'ज़िला' },
@@ -232,7 +235,7 @@ function LanguagePick({ step, total, onNext, onBack }) {
   )
 }
 
-function DemoAccounts({ roles = ['student', 'parent', 'counsellor', 'teacher', 'admin'] }) {
+function DemoAccounts({ roles = ['student', 'parent', 'counsellor', 'teacher', 'admin'], link = true }) {
   const t = useT(S)
   const { signIn } = useSession()
   const [busy, setBusy] = useState('')
@@ -251,7 +254,10 @@ function DemoAccounts({ roles = ['student', 'parent', 'counsellor', 'teacher', '
   }
   return (
     <div className="stack-1 mt">
-      <div className="section-title">{t('orDemo')}</div>
+      <div className="row between">
+        <div className="section-title">{t('orDemo')}</div>
+        {link && <Link className="link small" to="/demo">{t('allDemos')}</Link>}
+      </div>
       <div className="quick-login">
         {roles.map((r) => (
           <button key={r} type="button" className="btn small" disabled={!!busy} onClick={() => open(r)}>
@@ -260,6 +266,35 @@ function DemoAccounts({ roles = ['student', 'parent', 'counsellor', 'teacher', '
         ))}
       </div>
       {error && <div className="alert" role="alert">{error}</div>}
+    </div>
+  )
+}
+
+// The demo accounts' email and password; picking a row fills the sign-in form
+function DemoFill({ roles, onPick }) {
+  const t = useT(S)
+  const [accounts, setAccounts] = useState([])
+  useEffect(() => { api.demoAccounts().then(setAccounts).catch(() => {}) }, [])
+  const shown = accounts.filter((a) => !roles || roles.includes(a.role))
+  if (!shown.length) return null
+  return (
+    <div className="stack-1">
+      <div className="row between">
+        <div className="section-title">{t('demoDetails')}</div>
+        <Link className="link small" to="/demo">{t('allDemos')}</Link>
+      </div>
+      <table className="demo-fill">
+        <tbody>
+          {shown.map((a) => (
+            <tr key={a.role} tabIndex={0} onClick={() => onPick(a)} onKeyDown={(e) => e.key === 'Enter' && onPick(a)}
+              title={t('tapToFill')}>
+              <td className="hide-sm">{t(`role_${a.role}`)}</td>
+              <td><code>{a.email}</code></td>
+              <td><code>{a.password}</code></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -588,6 +623,7 @@ function AuthStep({ role, initialMode = 'login', onBack, onNew, onDone }) {
               </button>
             </div>
           )}
+          <DemoFill roles={staff ? [role] : undefined} onPick={(d) => { setEmail(d.email); setPassword(d.password); setErr('') }} />
         </>
       )}
 
@@ -670,7 +706,7 @@ function AuthStep({ role, initialMode = 'login', onBack, onNew, onDone }) {
       {err && <div className="alert">{err}</div>}
       {infoMsg && <div className="note ok">{infoMsg}</div>}
 
-      <DemoAccounts roles={staff ? [role] : ['student', 'parent', 'counsellor', 'teacher', 'admin']} />
+      <DemoAccounts roles={staff ? [role] : ['student', 'parent', 'counsellor', 'teacher', 'admin']} link={mode !== 'login'} />
       <button className="btn ghost" onClick={onBack}>{t('back')}</button>
     </div>
   )
