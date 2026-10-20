@@ -35,10 +35,14 @@ async function request(method, url, body, headers = {}, signal = undefined) {
     signal,
   })
   if (!res.ok) {
-    let detail = res.statusText
+    // HTTP/2 responses have no statusText, and host error pages are plain text, so always keep the status code.
+    let detail = `${res.status} ${res.statusText}`.trim()
+    const raw = await res.text().catch(() => '')
     try {
-      detail = (await res.json()).detail ?? detail
-    } catch { /* not JSON */ }
+      detail = JSON.parse(raw).detail ?? detail
+    } catch {
+      if (raw) detail = `${detail}: ${raw.split('\n')[0].slice(0, 120)}`
+    }
     throw new ApiError(typeof detail === 'string' ? detail : JSON.stringify(detail), res.status)
   }
   const type = res.headers.get('content-type') || ''

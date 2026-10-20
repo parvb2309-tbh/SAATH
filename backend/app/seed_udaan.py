@@ -4,6 +4,7 @@ simulation attempts and pathway stages, guardian links, consensus plans and risk
 ILLUSTRATIVE ONLY, like seed.py. Cohort sizes are chosen so most districts pass the N ≥ 50 privacy
 threshold and two (Muzaffarpur, Rewa) do not, which shows suppression in the admin dashboard.
 """
+import logging
 import random
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -78,6 +79,7 @@ def seed(rng: random.Random) -> None:
     }
     ids = {}
     mongo_users = mongo.get_sync_users_col()
+    mongo_ok = True
     for role, (name, relation, district, mobile, email, pwd) in demo.items():
         ids[role] = f"demo-{role}"
         created_str = (now - timedelta(days=20)).isoformat(timespec="seconds")
@@ -85,6 +87,8 @@ def seed(rng: random.Random) -> None:
                             "relation": relation, "preferred_lang": "hi", "district_id": district,
                             "created_at": created_str, "synthetic": 0,
                             "demo_key": role})
+        if not mongo_ok:
+            continue
         try:
             mongo_users.update_one(
                 {"_id": ids[role]},
@@ -105,8 +109,9 @@ def seed(rng: random.Random) -> None:
                 }},
                 upsert=True,
             )
-        except Exception:
-            pass
+        except Exception as e:  # unreachable MongoDB: stop retrying (each try waits for the timeout)
+            mongo_ok = False
+            logging.getLogger("udaan.seed").warning("Demo accounts not written to MongoDB: %s", str(e)[:160])
     class_id = "class-gaya-10b"
     db.insert("classes", {"id": class_id, "teacher_id": ids["teacher"], "name": "Class 10-B",
                           "school": "Government Inter College, Gaya", "district_id": "gaya"})
@@ -329,10 +334,12 @@ def _national(rng: random.Random, now: datetime) -> None:
         c.execute("UPDATE users SET state = (SELECT d.state FROM districts d WHERE d.id = users.district_id) "
                   "WHERE district_id IS NOT NULL")
     pilot = db.query("SELECT id, created_at FROM users WHERE synthetic = 1")
+    seen_at = []
     for u in pilot:
         created = datetime.fromisoformat(u["created_at"])
-        seen = created + (now - created) * rng.random()
-        db.update("users", "id", u["id"], {"last_active_at": seen.isoformat(timespec="seconds")})
+        seen_at.append(((created + (now - created) * rng.random()).isoformat(timespec="seconds"), u["id"]))
+    with db.connect() as c:  # one transaction: hundreds of separate commits would slow every cold start
+        c.executemany("UPDATE users SET last_active_at = ? WHERE id = ?", seen_at)
 
     total = sum(NATIONAL.values())
     rows = []

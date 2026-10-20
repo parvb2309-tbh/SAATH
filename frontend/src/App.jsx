@@ -37,7 +37,9 @@ export default function App() {
       .finally(() => setSyncedLang(lang))
   }, [lang, me?.user?.id, me?.user?.preferred_lang])
 
-  const loadMeta = () => api.meta().then(setMeta).catch((e) => setError(`Cannot reach the UDAAN server (${e.message}). Is the backend running on port 8000?`))
+  const local = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  const loadMeta = () => api.meta().then(setMeta).catch((e) => setError(
+    `Cannot reach the UDAAN server (${e.message}).${local ? ' Is the backend running on port 8000?' : ' Please try again in a minute.'}`))
   useEffect(() => { loadMeta() }, [])
 
   const ctx = useMemo(() => ({ lang: syncedLang || lang, setLang, meta }), [syncedLang, lang, meta])

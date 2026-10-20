@@ -7,11 +7,15 @@ means re-implementing this module only.
 import json
 import os
 import sqlite3
+import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
 _default_db = Path(__file__).resolve().parent.parent / "udaan.db"
+# Serverless hosts (e.g. Vercel) mount the app read-only; the demo database then lives in the temp folder.
+if not os.access(_default_db.parent, os.W_OK):
+    _default_db = Path(tempfile.gettempdir()) / "udaan.db"
 DB_PATH = Path(os.getenv("UDAAN_DB", _default_db))
 
 SCHEMA = """

@@ -14,7 +14,7 @@ _sync_client: pymongo.MongoClient | None = None
 def get_async_client() -> AsyncIOMotorClient:
     global _async_client
     if _async_client is None:
-        _async_client = AsyncIOMotorClient(config.MONGO_URI)
+        _async_client = AsyncIOMotorClient(config.MONGO_URI, serverSelectionTimeoutMS=5000)
     return _async_client
 
 
