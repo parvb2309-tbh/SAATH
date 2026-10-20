@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, storage } from '../lib/api'
 import { pick, useLang, useT } from '../lib/i18n'
-import { speak, stopSpeaking } from '../lib/speech'
+import { speak, stopSpeaking, subscribeAudioState } from '../lib/speech'
 import Cards from '../components/Cards'
 import EngineBadge from '../components/EngineBadge'
 import MicButton from '../components/MicButton'
@@ -9,7 +9,7 @@ import SeedhiLadder from '../components/SeedhiLadder'
 import Onboarding from './Onboarding'
 
 const MEMBER_ICON = { learner: '🧑‍🎓', mother: '👩', father: '👨', guardian: '🧓' }
-const SESSION_KEY = 'saath.session'
+const SESSION_KEY = 'udaan.session'
 
 export default function Family({ meta }) {
   const [sessionId, setSessionId] = useState(storage.get(SESSION_KEY))
@@ -37,9 +37,10 @@ function Chat({ meta, sessionId, onReset }) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const [autoSpeak, setAutoSpeak] = useState(storage.get('saath.autospeak') !== '0')
+  const [autoSpeak, setAutoSpeak] = useState(storage.get('udaan.autospeak') !== '0')
   const [showCall, setShowCall] = useState(false)
   const endRef = useRef(null)
+
 
   const load = async () => {
     try {
@@ -104,10 +105,11 @@ function Chat({ meta, sessionId, onReset }) {
     setPathway(await api.pathway(sessionId))
   }
   const toggleAuto = () => {
-    storage.set('saath.autospeak', autoSpeak ? '0' : '1')
+    storage.set('udaan.autospeak', autoSpeak ? '0' : '1')
     if (autoSpeak) stopSpeaking()
     setAutoSpeak(!autoSpeak)
   }
+
 
   const quick = [...meta.objections, 'course_info', 'human_request']
 
@@ -215,6 +217,12 @@ function Chat({ meta, sessionId, onReset }) {
 function Message({ m }) {
   const t = useT()
   const { lang } = useLang()
+  const [audioInfo, setAudioInfo] = useState({ state: 'idle', activeId: null })
+
+  useEffect(() => {
+    return subscribeAudioState((info) => setAudioInfo(info))
+  }, [])
+
   const bot = m.role === 'assistant'
   if (m.engine === 'quiz') {
     const lines = m.text.split('\n').slice(1)
@@ -225,15 +233,28 @@ function Message({ m }) {
       </details>
     )
   }
+
+  const isCurrent = audioInfo.activeId === m.id
+  const isLoading = isCurrent && audioInfo.state === 'loading'
+  const isPlaying = isCurrent && audioInfo.state === 'playing'
+
   return (
     <div className={`msg ${bot ? 'bot' : 'user'} ${m.pending ? 'pending' : ''}`}>
       <div className="who">
-        {bot ? 'साथ · SAATH' : `${MEMBER_ICON[m.speaker] ?? ''} ${t(m.speaker)}`}
+        {bot ? 'उड़ान · UDAAN' : `${MEMBER_ICON[m.speaker] ?? ''} ${t(m.speaker)}`}
       </div>
       <div className="bubble">
         {m.text}
         {bot && (
-          <button className="play" onClick={() => speak(m.text, m.lang || lang)} aria-label={t('readAloud')} title={t('readAloud')}>🔊</button>
+          <button
+            className={`play ${isLoading ? 'loading' : ''} ${isPlaying ? 'playing' : ''}`}
+            onClick={() => speak(m.text, m.lang || lang, m.id)}
+            disabled={isLoading}
+            aria-label={isPlaying ? 'Stop audio' : t('readAloud')}
+            title={isPlaying ? 'Stop audio' : t('readAloud')}
+          >
+            {isLoading ? '⏳' : isPlaying ? '⏹' : '🔊'}
+          </button>
         )}
       </div>
       {bot && <Cards cards={m.cards} />}
@@ -241,6 +262,7 @@ function Message({ m }) {
     </div>
   )
 }
+
 
 function EscalationBanner({ sessionId, escalation, open, setOpen, onDone }) {
   const t = useT()

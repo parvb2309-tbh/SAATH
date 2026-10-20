@@ -28,7 +28,7 @@ export default function DistrictMap({ districts, concerns }) {
             <Tooltip direction="top" offset={[0, -6]}>
               <strong>{d.name_en}</strong>, {d.state}<br />
               Resistance: <strong>{d.resistance ?? '—'}%</strong> of {d.sessions} families<br />
-              Top worry: {d.top_concern ? `${concerns[d.top_concern].icon} ${concerns[d.top_concern].en}` : '—'}
+              Top worry: {d.top_concern ? `${concerns[d.top_concern]?.icon || ''} ${concerns[d.top_concern]?.en || d.top_concern} (${d.top_concern_pct || 0}% concentration)` : '—'}
             </Tooltip>
           </CircleMarker>
         ))}

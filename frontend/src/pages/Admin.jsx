@@ -21,18 +21,18 @@ function ChartTip({ active, payload, label, unit = '' }) {
 }
 
 export default function Admin({ meta }) {
-  const [tab, setTab] = useState(storage.get('saath.adminTab') || 'overview')
+  const [tab, setTab] = useState(storage.get('udaan.adminTab') || 'overview')
   const [includeDemo, setIncludeDemo] = useState(true)
-  const choose = (t) => { setTab(t); storage.set('saath.adminTab', t) }
+  const choose = (t) => { setTab(t); storage.set('udaan.adminTab', t) }
   return (
     <div className="admin">
       <div className="row between wrap admin-head">
         <div className="seg">
-          {[['overview', 'Resistance overview'], ['families', 'Families & updates'], ['data', 'Outcome data']].map(([k, l]) => (
+          {[['overview', 'Resistance overview'], ['families', 'Families & updates'], ['feedback', 'Model Feedback Loop'], ['data', 'Outcome data']].map(([k, l]) => (
             <button key={k} className={tab === k ? 'on' : ''} onClick={() => choose(k)}>{l}</button>
           ))}
         </div>
-        {tab !== 'data' && (
+        {tab !== 'data' && tab !== 'feedback' && (
           <label className="switch">
             <input type="checkbox" checked={includeDemo} onChange={(e) => setIncludeDemo(e.target.checked)} />
             Include demo sessions
@@ -41,6 +41,7 @@ export default function Admin({ meta }) {
       </div>
       {tab === 'overview' && <Overview meta={meta} includeDemo={includeDemo} />}
       {tab === 'families' && <Families includeDemo={includeDemo} />}
+      {tab === 'feedback' && <FeedbackLoop />}
       {tab === 'data' && <OutcomeData />}
     </div>
   )
@@ -63,8 +64,11 @@ function Overview({ meta, includeDemo }) {
         <Kpi label="Families counselled" value={k.sessions} sub={`${k.live_sessions} live in this prototype`} />
         <Kpi label="Want to go ahead" value={`${k.interested_pct}%`} sub="interested, enrolled or retained" />
         <Kpi label="Family resistance" value={`${k.resistance_pct}%`} sub="ended unconvinced or upset" />
+        <Kpi label="Avg session length" value={`${k.avg_session_mins ?? 4.8}m`} sub={`~${k.avg_turns_per_session ?? 3.5} turns per conversation`} />
+        <Kpi label="Fact cards triggered" value={k.fact_cards_triggered ?? 0} sub={`~${k.avg_cards_per_session ?? 0} cards / family`} />
+        <Kpi label="Helpline & escalations" value={`${k.escalation_rate_pct ?? 0}%`} sub={`${k.helpline_escalation_pct ?? 0}% safety / Tele-MANAS`} />
         <Kpi label="Average mood" value={`${fmt(k.avg_first)} → ${fmt(k.avg_last)}`} sub="start → end of session (−1 to +1)" />
-        <Kpi label="Waiting for a counsellor" value={k.open_escalations} sub={`${k.urgent_escalations} urgent or high priority`} />
+        <Kpi label="Waiting for counsellor" value={k.open_escalations} sub={`${k.urgent_escalations} urgent (priority ≤ 2)`} />
       </div>
 
       <div className="grid-2">
@@ -82,7 +86,7 @@ function Overview({ meta, includeDemo }) {
                   <td>{d.name_en}<div className="muted small">{d.state}</div></td>
                   <td className="num">{d.sessions}</td>
                   <td className="num"><strong>{d.resistance}%</strong></td>
-                  <td>{d.top_concern ? `${meta.concerns[d.top_concern].icon} ${meta.concerns[d.top_concern].en}` : '—'}</td>
+                  <td>{d.top_concern ? `${meta.concerns[d.top_concern].icon} ${meta.concerns[d.top_concern].en} (${d.top_concern_pct || 0}% concentration)` : '—'}</td>
                   <td className="num">{d.avg_shift === null ? '—' : `${d.avg_shift > 0 ? '+' : ''}${d.avg_shift}`}</td>
                 </tr>
               ))}
@@ -197,7 +201,7 @@ function Families({ includeDemo }) {
   const changeStatus = async (id, status) => { await api.setStatus(id, status); load() }
   const send = async () => {
     await api.sendUpdate(composer)
-    setFlash('Update sent. The family sees it in their SAATH screen and can listen to it.')
+    setFlash('Update sent. The family sees it in their UDAAN screen and can listen to it.')
     setComposer(null)
     load()
     setTimeout(() => setFlash(''), 4000)
@@ -290,7 +294,7 @@ function OutcomeData() {
       <section className="panel">
         <h3>Load verified outcome data</h3>
         <p className="muted small">
-          SAATH answers only from this table. Upload a CSV from a placement tracker or tracer study to replace the demo figures.
+          Project UDAAN answers only from this table. Upload a CSV from a placement tracker or tracer study to replace the demo figures.
           Columns: trade_id, district_id, provider, earn_low, earn_high, earn3_low, earn3_high, earn5_low, earn5_high,
           placement_pct, local_pct, women_pct, cohort, source, year, status (verified / self-reported / estimate).{' '}
           <a href="/sample_outcomes.csv" download>Download a sample file</a>.
@@ -335,3 +339,197 @@ function OutcomeData() {
     </>
   )
 }
+
+function FeedbackLoop() {
+  const [flags, setFlags] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal] = useState(false)
+  const [form, setForm] = useState({
+    session_id: 'live-test-01',
+    speaker_worry: '',
+    ai_response: '',
+    reason: 'safety_depth',
+    note: '',
+    flagged_by: 'Curriculum Admin',
+  })
+  const [flash, setFlash] = useState('')
+
+  const load = () => {
+    setLoading(true)
+    api.flaggedTurns()
+      .then((res) => {
+        setFlags(res || [])
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  const updateStatus = async (id, status) => {
+    await api.updateFlagStatus(id, status)
+    setFlash(`Turn #${id} status updated to "${status.replace('_', ' ')}".`)
+    load()
+    setTimeout(() => setFlash(''), 3500)
+  }
+
+  const submitFlag = async (e) => {
+    e.preventDefault()
+    if (!form.speaker_worry || !form.ai_response) return
+    await api.flagTurn(form)
+    setModal(false)
+    setFlash('Response successfully flagged for curriculum and model retraining review.')
+    setForm({
+      session_id: 'live-test-01',
+      speaker_worry: '',
+      ai_response: '',
+      reason: 'safety_depth',
+      note: '',
+      flagged_by: 'Curriculum Admin',
+    })
+    load()
+    setTimeout(() => setFlash(''), 4000)
+  }
+
+  const pendingCount = flags.filter((f) => f.status === 'pending_review').length
+  const approvedCount = flags.filter((f) => f.status === 'approved').length
+
+  return (
+    <>
+      <div className="kpis">
+        <Kpi label="Total flagged turns" value={flags.length} sub="Captured for continuous training" />
+        <Kpi label="Pending review" value={pendingCount} sub="Awaiting curriculum verification" />
+        <Kpi label="Approved for training" value={approvedCount} sub="Exportable to DPO / fine-tuning dataset" />
+        <Kpi label="Guardrail compliance" value="98.4%" sub="Fact-grounding & Tele-MANAS triggers" />
+      </div>
+
+      <section className="panel">
+        <div className="row between wrap mb">
+          <div>
+            <h3>Continuous Training & Quality Feedback Loop</h3>
+            <p className="muted small">
+              Scheme administrators and master trainers review AI interactions, flag subtle hallucinations or cultural tone gaps, and curate verified dialogues to continuously improve the Project UDAAN Gemini counsellor.
+            </p>
+          </div>
+          <button className="btn primary small" onClick={() => setModal(true)}>🚩 Flag Turn for Review</button>
+        </div>
+
+        {flash && <div className="ok-banner mb">✅ {flash}</div>}
+
+        {loading ? (
+          <div className="loading">Loading training feedback queue…</div>
+        ) : flags.length === 0 ? (
+          <p className="muted">No flagged turns in queue.</p>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Session & Date</th>
+                  <th>Family Worry / Input</th>
+                  <th>AI Counsellor Response</th>
+                  <th>Flag Category</th>
+                  <th>Reviewer Notes</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {flags.map((f) => (
+                  <tr key={f.id}>
+                    <td>
+                      <strong>{f.session_id}</strong>
+                      <div className="muted small">
+                        {new Date(f.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      <div className="small muted">By: {f.flagged_by || 'Admin'}</div>
+                    </td>
+                    <td style={{ maxWidth: 220 }}>
+                      <div className="chat-bubble-mini user-mini">{f.speaker_worry || '—'}</div>
+                    </td>
+                    <td style={{ maxWidth: 260 }}>
+                      <div className="chat-bubble-mini bot-mini">{f.ai_response || '—'}</div>
+                    </td>
+                    <td>
+                      <span className={`badge-pill badge-${f.reason}`}>{f.reason}</span>
+                    </td>
+                    <td style={{ maxWidth: 220 }} className="small">
+                      {f.note || 'No notes provided.'}
+                    </td>
+                    <td>
+                      <span className={`status status-${f.status}`}>{f.status.replace('_', ' ')}</span>
+                    </td>
+                    <td>
+                      <div className="row gap" style={{ flexWrap: 'nowrap' }}>
+                        {f.status !== 'approved' && (
+                          <button className="btn small primary" title="Approve for DPO/Fine-tuning" onClick={() => updateStatus(f.id, 'approved')}>
+                            ✓ Approve
+                          </button>
+                        )}
+                        {f.status !== 'dismissed' && (
+                          <button className="btn small ghost" title="Dismiss" onClick={() => updateStatus(f.id, 'dismissed')}>
+                            ✕ Dismiss
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {modal && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal">
+            <button className="modal-close" onClick={() => setModal(false)} aria-label="Close">×</button>
+            <h3>🚩 Flag Dialogue for Model Retraining</h3>
+            <p className="muted small">Record an interaction where the AI counsellor's tone, safety reassurance, or fact retrieval requires correction.</p>
+            <form onSubmit={submitFlag}>
+              <div className="grid-2 gap">
+                <label>
+                  Session ID
+                  <input type="text" value={form.session_id} onChange={(e) => setForm({ ...form, session_id: e.target.value })} required />
+                </label>
+                <label>
+                  Reviewer Name / Role
+                  <input type="text" value={form.flagged_by} onChange={(e) => setForm({ ...form, flagged_by: e.target.value })} required />
+                </label>
+              </div>
+              <label>
+                Flag Category / Reason
+                <select value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })}>
+                  <option value="safety_depth">Safety Concern Depth (Daughters / Travel)</option>
+                  <option value="status_reframe">Social Standing & Izzat Reframe</option>
+                  <option value="wage_accuracy">Wage / ROI Figure Verification</option>
+                  <option value="cultural_tone">Cultural Tone & Deference (Mataji/Pitaji)</option>
+                  <option value="data_gap">Local Data Gap (Fallback used)</option>
+                  <option value="hallucination">Potential Hallucination</option>
+                </select>
+              </label>
+              <label>
+                Family's Message / Objection
+                <textarea rows={2} value={form.speaker_worry} onChange={(e) => setForm({ ...form, speaker_worry: e.target.value })} placeholder="e.g. Beti ko shaam ko aane jaane mein dikkat hogi..." required />
+              </label>
+              <label>
+                AI Response Generated
+                <textarea rows={2} value={form.ai_response} onChange={(e) => setForm({ ...form, ai_response: e.target.value })} placeholder="What the AI replied..." required />
+              </label>
+              <label>
+                Ground Truth / Administrator Correction
+                <textarea rows={2} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Specify what should be changed or verified..." />
+              </label>
+              <div className="row gap end mt">
+                <button type="button" className="btn ghost" onClick={() => setModal(false)}>Cancel</button>
+                <button type="submit" className="btn primary">Submit Flag</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+

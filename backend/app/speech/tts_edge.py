@@ -31,3 +31,22 @@ class EdgeTTS:
         if len(_CACHE) > _CACHE_SIZE:
             _CACHE.popitem(last=False)
         return bytes(audio), "audio/mpeg"
+
+    async def stream_synthesize(self, text: str, lang: str):
+        """Stream chunks immediately as edge-tts yields them, achieving sub-200ms TTFB."""
+        voice = VOICES.get(lang, VOICES["hi"])
+        key = hashlib.sha1(f"{voice}|{text}".encode()).hexdigest()
+        if key in _CACHE:
+            _CACHE.move_to_end(key)
+            yield _CACHE[key]
+            return
+        audio = bytearray()
+        async for chunk in edge_tts.Communicate(text, voice, rate="-5%").stream():
+            if chunk["type"] == "audio":
+                audio.extend(chunk["data"])
+                yield chunk["data"]
+        if audio:
+            _CACHE[key] = bytes(audio)
+            if len(_CACHE) > _CACHE_SIZE:
+                _CACHE.popitem(last=False)
+

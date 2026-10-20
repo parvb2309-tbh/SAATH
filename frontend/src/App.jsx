@@ -9,20 +9,20 @@ import Counsellor from './pages/Counsellor'
 const Admin = lazy(() => import('./pages/Admin'))
 
 export default function App() {
-  const [lang, setLangState] = useState(storage.get('saath.lang') || 'hi')
+  const [lang, setLangState] = useState(storage.get('udaan.lang') || 'hi')
   const [meta, setMeta] = useState(null)
   const [error, setError] = useState('')
 
   const setLang = (l) => {
     setLangState(l)
-    storage.set('saath.lang', l)
+    storage.set('udaan.lang', l)
   }
   useEffect(() => {
     document.documentElement.lang = lang
   }, [lang])
 
   const loadMeta = () =>
-    api.meta().then(setMeta).catch((e) => setError(`Cannot reach the SAATH server (${e.message}). Is the backend running on port 8000?`))
+    api.meta().then(setMeta).catch((e) => setError(`Cannot reach the Project UDAAN server (${e.message}). Is the backend running on port 8000?`))
   useEffect(() => {
     loadMeta()
   }, [])
@@ -34,12 +34,13 @@ export default function App() {
     <LangContext.Provider value={ctx}>
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden>साथ</span>
+          <span className="brand-mark" aria-hidden>उड़ान</span>
           <div>
-            <div className="brand-name">SAATH</div>
+            <div className="brand-name">UDAAN</div>
             <div className="brand-tag">{t('appTagline')}</div>
           </div>
         </div>
+
         <nav className="nav">
           <NavLink to="/" end>{t('navFamily')}</NavLink>
           <NavLink to="/counsellor">{t('navCounsellor')}</NavLink>

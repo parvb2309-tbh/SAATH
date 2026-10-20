@@ -99,7 +99,7 @@ export default function Counsellor({ meta }) {
             </div>
 
             <div className="handover">
-              <div className="card-kicker">Why SAATH escalated</div>
+              <div className="card-kicker">Why UDAAN escalated</div>
               <p><strong>{detail.reason}</strong></p>
               <div className="card-kicker">Handover note {detail.engine === 'gemini' ? '(written by Gemini)' : '(auto-generated)'}</div>
               <p>{detail.summary}</p>
@@ -116,8 +116,9 @@ export default function Counsellor({ meta }) {
             <div className="transcript">
               {detail.messages.filter((m) => m.text).map((m) => (
                 <div key={m.id} className={`t-row ${m.role}`}>
-                  <div className="t-who">{m.role === 'assistant' ? 'SAATH' : MEMBER[m.speaker] || m.speaker}</div>
+                  <div className="t-who">{m.role === 'assistant' ? 'UDAAN' : MEMBER[m.speaker] || m.speaker}</div>
                   <div className="t-text">{m.text}</div>
+
                   {m.role === 'user' && (
                     <div className="t-tags">
                       {(m.concerns || []).map((c) => (

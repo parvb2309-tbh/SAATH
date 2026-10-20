@@ -75,7 +75,7 @@ export const STRINGS = {
   yes: { en: 'Yes', hi: 'हाँ' },
   no: { en: 'No', hi: 'नहीं' },
   quizResult: { en: 'These may suit the learner', hi: 'ये काम अच्छे लग सकते हैं' },
-  thinkingDots: { en: 'SAATH is thinking…', hi: 'साथ सोच रहा है…' },
+  thinkingDots: { en: 'UDAAN is thinking…', hi: 'उड़ान सोच रहा है…' },
   hookStories: {
     en: [
       ['Pooja from Gaya', ' installs rooftop solar with an all-women team, and is home every evening.'],
@@ -92,7 +92,8 @@ export const STRINGS = {
   hookSub: { en: 'Find out together, as a family', hi: 'पूरा परिवार मिलकर जानिए' },
   hookCta: { en: "Let's find out", hi: 'चलिए जानते हैं' },
   hookNote: { en: 'Stories are illustrative examples', hi: 'कहानियाँ उदाहरण के लिए हैं' },
-  howTitle: { en: 'How SAATH works', hi: 'साथ कैसे काम करता है' },
+  howTitle: { en: 'How Project UDAAN works', hi: 'प्रोजेक्ट उड़ान कैसे काम करता है' },
+
   howRows: {
     en: [
       ['🧩', 'Answer 9 quick questions', 'The learner and the parents both answer: no right or wrong.'],

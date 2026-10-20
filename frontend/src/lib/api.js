@@ -1,9 +1,10 @@
-async function request(method, url, body, headers = {}) {
+async function request(method, url, body, headers = {}, signal = undefined) {
   const isJson = body !== undefined && !(body instanceof Blob) && typeof body !== 'string'
   const res = await fetch(url, {
     method,
     headers: isJson ? { 'Content-Type': 'application/json', ...headers } : headers,
     body: isJson ? JSON.stringify(body) : body,
+    signal,
   })
   if (!res.ok) {
     let detail = res.statusText
@@ -38,19 +39,27 @@ export const api = {
   outcomes: () => request('GET', '/api/admin/outcomes'),
   importOutcomes: (csvText, replace) =>
     request('POST', `/api/admin/import-outcomes?replace=${replace}`, csvText, { 'Content-Type': 'text/csv' }),
+  flaggedTurns: () => request('GET', '/api/admin/flagged-turns'),
+  flagTurn: (body) => request('POST', '/api/admin/flag-turn', body),
+  updateFlagStatus: (id, status) => request('POST', `/api/admin/flagged-turns/${id}/status`, { status }),
 
-  tts: (text, lang) => request('POST', '/api/speech/tts', { text, lang }),
+  tts: (text, lang, signal) => request('POST', '/api/speech/tts-stream', { text, lang }, {}, signal),
   stt: (blob, lang) => request('POST', `/api/speech/stt?lang=${lang}`, blob, { 'Content-Type': blob.type || 'audio/webm' }),
 }
 
 export const storage = {
   get(key) {
-    try { return window.localStorage.getItem(key) } catch { return null }
+    try {
+      return window.localStorage.getItem(key)
+    } catch { return null }
   },
   set(key, value) {
     try { window.localStorage.setItem(key, value) } catch { /* private mode */ }
   },
   remove(key) {
-    try { window.localStorage.removeItem(key) } catch { /* private mode */ }
+    try {
+      window.localStorage.removeItem(key)
+    } catch { /* private mode */ }
   },
 }
+

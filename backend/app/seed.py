@@ -1,4 +1,4 @@
-"""Demo data for the SAATH prototype.
+"""Demo data for the Project UDAAN prototype.
 
 Everything here is ILLUSTRATIVE. Earnings, placement rates and stories are generated so the
 prototype has something realistic to show; every record carries a "(demo)" source label and
@@ -352,6 +352,50 @@ def seed(force: bool = False) -> None:
                                for s in SCHEMES])
     _seed_sessions(rng)
     _seed_escalations()
+    _seed_flagged_turns()
+
+
+DEMO_FLAGGED = [
+    {
+        "created_at": (datetime.now(timezone.utc) - timedelta(hours=4)).isoformat(timespec="seconds"),
+        "session_id": "demo-esc-1",
+        "message_id": 101,
+        "speaker_worry": "बेटी को रात में आने जाने में डर लगता है, कोई अनहोनी हो गई तो?",
+        "ai_response": "माताजी, बेटी की सुरक्षा आपकी सबसे बड़ी चिंता है और यह बिल्कुल जायज़ है। सरकारी सेंटरों में केवल दिन की कक्षाएँ और महिला ट्रेनर होती हैं।",
+        "reason": "safety_depth",
+        "note": "Verify if Gaya centre provides bus transit pass for rural wards. Good empathy, but add local transport details.",
+        "flagged_by": "District Admin Gaya",
+        "status": "pending_review",
+    },
+    {
+        "created_at": (datetime.now(timezone.utc) - timedelta(hours=18)).isoformat(timespec="seconds"),
+        "session_id": "demo-esc-2",
+        "message_id": 104,
+        "speaker_worry": "Log kahenge beta mistri ban gaya, humari izzat ka kya hoga?",
+        "ai_response": "बाऊजी, यह मिस्त्री का काम नहीं है। यह सरकारी मान्यता प्राप्त NSQF लेवल 4 तकनीशियन का पद है, जिसमें सुपरवाइज़र बनने की सीधी सीढ़ी है।",
+        "reason": "status_reframe",
+        "note": "Excellent reframe on social prestige. Approved for DPO / few-shot training examples.",
+        "flagged_by": "Curriculum Head",
+        "status": "approved",
+    },
+    {
+        "created_at": (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(timespec="seconds"),
+        "session_id": "demo-esc-3",
+        "message_id": 108,
+        "speaker_worry": "Rewa mein solar installer ka kya scope hai?",
+        "ai_response": "रीवा ज़िले का स्थानीय रिकॉर्ड अभी नहीं है, यह मध्य प्रदेश का राज्य-स्तरीय आँकड़ा है: ₹14,000–18,000 प्रति माह।",
+        "reason": "state_fallback",
+        "note": "District outcome record missing; AI correctly flagged state fallback. Need to collect Rewa solar tracer data.",
+        "flagged_by": "Data Analyst Rewa",
+        "status": "pending_review",
+    },
+]
+
+
+def _seed_flagged_turns() -> None:
+    if db.count("flagged_turns") == 0:
+        db.insert_many("flagged_turns", DEMO_FLAGGED)
+
 
 
 def _cumulative(sources):

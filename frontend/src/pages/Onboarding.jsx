@@ -9,7 +9,7 @@ const WHO = {
   parents: { icon: '👨‍👩', en: 'Parents answer', hi: 'माता-पिता जवाब दें' },
   family: { icon: '👨‍👩‍👧', en: 'Whole family answers', hi: 'पूरा परिवार जवाब दे' },
 }
-const STEP_KEY = 'saath.onboarding'
+const STEP_KEY = 'udaan.onboarding'
 
 // Opening flow: hook → how it works (+ consent) → family profile → "journey begins" → quiz → result.
 export default function Onboarding({ meta, onStart }) {
@@ -231,7 +231,7 @@ function Quiz({ meta, questions, profile, answers, setAnswers, onBack, onDone })
   const { lang } = useLang()
   const [i, setI] = useState(Math.min(answers.length, questions.length - 1))
   const [chosen, setChosen] = useState(null)
-  const [readAloud, setReadAloud] = useState(storage.get('saath.quizspeak') === '1')
+  const [readAloud, setReadAloud] = useState(storage.get('udaan.quizspeak') === '1')
   const q = questions[i]
   const live = scoreAnswers(questions, answers)
 
@@ -262,7 +262,7 @@ function Quiz({ meta, questions, profile, answers, setAnswers, onBack, onDone })
   })
   const back = () => (i === 0 ? onBack() : setI(i - 1))
   const toggleRead = () => {
-    storage.set('saath.quizspeak', readAloud ? '0' : '1')
+    storage.set('udaan.quizspeak', readAloud ? '0' : '1')
     if (readAloud) stopSpeaking()
     setReadAloud(!readAloud)
   }

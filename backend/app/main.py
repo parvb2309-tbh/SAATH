@@ -1,4 +1,4 @@
-"""SAATH prototype API. Run: uvicorn app.main:app --reload (from backend/)."""
+"""Project UDAAN API. Run: uvicorn app.main:app --reload (from backend/)."""
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -23,11 +23,13 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="SAATH API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Project UDAAN API", version="0.2.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
                    allow_methods=["*"], allow_headers=["*"])
 for r in (sessions.router, escalations.router, admin.router, speech.router):
     app.include_router(r)
+
+
 
 
 @app.get("/api/health")

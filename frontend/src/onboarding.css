@@ -20,7 +20,7 @@
 .rise { opacity: 0; transform: translateY(12px); animation: rise 0.6s ease forwards; animation-delay: var(--d, 0s); }
 @keyframes rise { to { opacity: 1; transform: none; } }
 
-/* hook + journey begins: dark stage in the SAATH navy */
+/* hook + journey begins: dark stage in the UDAAN navy */
 .onb-hook, .onb-begin {
   background:
     radial-gradient(60% 50% at 30% 40%, rgba(0, 112, 192, 0.35), transparent 70%),

@@ -72,3 +72,35 @@ def test_csv_import(client):
                 "beauty,nowhere,X,1,2,3,4,5,6,7,8,9,10,Y,2025,verified\n")
     r = client.post("/api/admin/import-outcomes", content=csv_text, headers={"content-type": "text/csv"}).json()
     assert r["loaded"] == 1 and len(r["errors"]) == 1
+
+
+def test_admin_summary_extended_and_flagged_turns(client):
+    s = client.get("/api/admin/summary").json()
+    assert "avg_session_mins" in s["kpis"]
+    assert "avg_turns_per_session" in s["kpis"]
+    assert "fact_cards_triggered" in s["kpis"]
+    assert "helpline_escalation_pct" in s["kpis"]
+    assert len(s["districts"]) > 0
+    assert "top_concern_pct" in s["districts"][0]
+
+    # test flag turn
+    flag_res = client.post("/api/admin/flag-turn", json={
+        "session_id": "test-session-1",
+        "message_id": 1,
+        "speaker_worry": "Fees kitni lagegi?",
+        "ai_response": "Fees muft hai under PMKVY.",
+        "reason": "cost_accuracy",
+        "note": "Check scheme validity for 2026",
+        "flagged_by": "TestAdmin",
+    }).json()
+    assert flag_res["id"]
+    assert flag_res["status"] == "pending_review"
+
+    # test list flagged turns
+    flags = client.get("/api/admin/flagged-turns").json()
+    assert any(f["id"] == flag_res["id"] for f in flags)
+
+    # test resolve/update status
+    updated = client.post(f"/api/admin/flagged-turns/{flag_res['id']}/status", json={"status": "approved"}).json()
+    assert updated["status"] == "approved"
+
